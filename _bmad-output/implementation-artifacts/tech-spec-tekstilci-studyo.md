@@ -2,7 +2,8 @@
 title: 'KumashAi — Tekstilci tasarım ve baskı akışı'
 type: 'feature'
 created: '2026-11-04'
-status: 'ready-for-dev'
+status: 'in-progress'
+baseline_commit: 'e9e4e0d2fc82af10a7019ab0bdebcbb7c84eeaf0'
 approved: '2026-11-04'
 story_id: '1-1-tekstilci-studyo'
 context: []

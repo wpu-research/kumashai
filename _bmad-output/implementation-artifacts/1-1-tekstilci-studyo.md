@@ -1,6 +1,6 @@
 # Story 1.1 — Tekstilci tasarım ve baskı stüdyosu
 
-Durum: ready-for-dev
+Durum: in-progress
 
 ## Kullanıcı ihtiyacı
 
