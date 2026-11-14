@@ -462,6 +462,15 @@ dialog::backdrop { background: #24372b55; backdrop-filter: blur(3px); }
 .audience { margin-bottom: 14px; }
 .audience button { font-size: 13px; padding: 9px 4px; }
 
+/* ---------- Deseni al ---------- */
+#pattern-dialog { width: min(1000px, calc(100vw - 24px)); max-height: calc(100vh - 24px); padding: 20px; }
+#pt-canvas { max-width: 100%; max-height: 64vh; display: block; cursor: crosshair; }
+.pt-heading { margin: 14px 0 8px; }
+.pt-figures { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.pt-figures button { aspect-ratio: 1; border: 2px solid var(--line); border-radius: 8px; padding: 5px; display: grid; place-items: center; opacity: .55; }
+.pt-figures button[aria-pressed="true"] { border-color: var(--green); opacity: 1; box-shadow: 0 0 0 2px var(--green-light); }
+.pt-figures canvas { max-width: 100%; max-height: 100%; width: auto; height: 100%; object-fit: contain; }
+
   </style>
   <style id="page-style">@page { size: A5 landscape; margin: 0; }</style>
 </head>
@@ -714,6 +723,25 @@ dialog::backdrop { background: #24372b55; backdrop-filter: blur(3px); }
         <div class="at-row"><label for="fg-tolerance">Zemin silme</label><input type="range" id="fg-tolerance" min="8" max="140" value="48"><span class="at-val" id="fg-tolerance-val">48</span></div>
         <p class="small muted">Kutunun kenarındaki renk zemin sayılır ve içeri doğru silinir. Yalnız kullanım hakkı sizde olan görsellerde kullanın; lisanslı karakterler (çizgi film kahramanları, markalar) izinsiz basılamaz.</p>
         <button class="button primary full" id="fg-apply" data-testid="fg-apply" type="button" disabled>Motif olarak ekle</button>
+      </div>
+    </div>
+  </dialog>
+  <dialog id="pattern-dialog" data-testid="pattern-dialog" aria-labelledby="pattern-title">
+    <div class="dialog-heading">
+      <div><span class="eyebrow">DESENİ AL</span><h2 id="pattern-title">Görselden yalnız deseni alın</h2></div>
+      <button id="pt-close" class="icon-button" aria-label="Kapat" type="button">×</button>
+    </div>
+    <p class="small at-status" id="pt-status" data-testid="pt-status" role="status" aria-live="polite"></p>
+    <div class="rc-grid">
+      <div class="rc-stage"><canvas id="pt-canvas" data-testid="pt-canvas" aria-label="Kumaşın zemin rengine tıklayın"></canvas></div>
+      <div class="rc-side">
+        <div class="at-row"><label>Kumaş zemini</label><i class="rc-from" id="pt-ground"></i><span class="at-val" id="pt-ground-label"></span></div>
+        <div class="at-row"><label for="pt-tolerance">Zemin payı</label><input type="range" id="pt-tolerance" min="15" max="110" value="48"><span class="at-val" id="pt-tolerance-val">48</span></div>
+        <h3 class="small-heading pt-heading">BULUNAN FİGÜRLER <span class="hint">— alınacaklara dokunun</span></h3>
+        <div class="pt-figures" id="pt-figures" data-testid="pt-figures"></div>
+        <p class="small muted">Zemin rengiyle çevrili figürler alınır; masa, arka plan ve kenarda yarım kalanlar alınmaz. Yalnız kullanım hakkı sizde olan görsellerde kullanın; lisanslı karakterler izinsiz basılamaz.</p>
+        <button class="button primary full" id="pt-apply" data-testid="pt-apply" type="button" disabled>Deseni al</button>
+        <button class="button subtle full" id="pt-keep" data-testid="pt-keep" type="button">Görseli olduğu gibi kullan</button>
       </div>
     </div>
   </dialog>
@@ -2164,6 +2192,200 @@ function initFigure({ getBackground, onApply }) {
 return { cutFigure, initFigure };
 })();
 
+/* ---- desen.js ---- */
+const __desen = (() => {
+'use strict';
+/**
+ * Deseni al: bir ürün/kumaş görselinde kumaşın zemin rengini bulur, zeminle
+ * tamamen çevrili adacıkları (figürleri) ayırır ve şeffaf motifler olarak verir.
+ * Görselin kenarına ya da kumaş dışına (masa, arka plan) değen parçalar alınmaz.
+ * findFigures ve guessGround saftır (DOM yok) ve Node'da test edilir.
+ */
+const { extractColors, toHex, toRgb } = __recolor;
+
+const MAX_ANALYSIS = 1400; // çözümleme ve çıktı için en uzun kenar (px)
+const MAX_FIGURES = 12;
+
+/** Gölgeye dayanıklı renk farkı: renk tonu ağır, parlaklık hafif sayılır. */
+function groundDistance(r, g, b, ground) {
+  const s = r + g + b || 1, gs = ground[0] + ground[1] + ground[2] || 1;
+  const chroma = Math.hypot(r / s - ground[0] / gs, g / s - ground[1] / gs, b / s - ground[2] / gs);
+  return 255 * chroma + 0.45 * Math.abs(s - gs) / 3;
+}
+
+/**
+ * Dönen: { figures: [{ id, x, y, width, height, area }], labels } (alan sırasına göre).
+ * labels[p] === id olan pikseller o figüre aittir.
+ */
+function findFigures(src, width, height, ground, tolerance) {
+  const total = width * height;
+  const labels = new Int32Array(total); // -1 zemin, 0 bakılmadı, >0 parça numarası
+  for (let p = 0; p < total; p++) {
+    const i = p * 4;
+    if (src[i + 3] >= 128 && groundDistance(src[i], src[i + 1], src[i + 2], ground) < tolerance) labels[p] = -1;
+  }
+  const stack = new Int32Array(total);
+  const parts = [];
+  for (let start = 0; start < total; start++) {
+    if (labels[start]) continue;
+    const id = parts.length + 1;
+    const part = { id, area: 0, x0: width, y0: height, x1: 0, y1: 0, border: false };
+    let top = 0;
+    labels[start] = id; stack[top++] = start;
+    while (top) {
+      const p = stack[--top], x = p % width, y = (p - x) / width;
+      part.area++;
+      if (x < part.x0) part.x0 = x; if (x > part.x1) part.x1 = x;
+      if (y < part.y0) part.y0 = y; if (y > part.y1) part.y1 = y;
+      if (x === 0 || y === 0 || x === width - 1 || y === height - 1) part.border = true;
+      if (x > 0 && !labels[p - 1]) { labels[p - 1] = id; stack[top++] = p - 1; }
+      if (x < width - 1 && !labels[p + 1]) { labels[p + 1] = id; stack[top++] = p + 1; }
+      if (y > 0 && !labels[p - width]) { labels[p - width] = id; stack[top++] = p - width; }
+      if (y < height - 1 && !labels[p + width]) { labels[p + width] = id; stack[top++] = p + width; }
+    }
+    parts.push(part);
+  }
+  const enclosed = parts.filter(c => {
+    const w = c.x1 - c.x0 + 1, h = c.y1 - c.y0 + 1;
+    return !c.border && c.area >= 24 && w * h < total * 0.2 && w / h > 0.3 && w / h < 3.4;
+  });
+  const largest = Math.max(0, ...enclosed.map(c => c.area));
+  const figures = enclosed.filter(c => c.area >= largest * 0.25).sort((a, b) => b.area - a.area).slice(0, MAX_FIGURES)
+    .map(c => ({ id: c.id, x: c.x0, y: c.y0, width: c.x1 - c.x0 + 1, height: c.y1 - c.y0 + 1, area: c.area }));
+  return { figures, labels };
+}
+
+/** Baskın renklerden, içinde en çok figür barındıranı zemin sayar. */
+function guessGround(src, width, height, tolerance) {
+  let best = null;
+  for (const candidate of extractColors(src, 6).slice(0, 5)) {
+    const { figures } = findFigures(src, width, height, candidate.rgb, tolerance);
+    const score = figures.length * figures.reduce((sum, f) => sum + f.area, 0);
+    if (!best || score > best.score) best = { rgb: candidate.rgb, score };
+  }
+  return best ? best.rgb : null;
+}
+
+function initPattern({ onApply, maxFigures }) {
+  const $ = id => document.getElementById(id);
+  const dialog = $('pattern-dialog');
+  const canvas = $('pt-canvas'), ctx = canvas.getContext('2d');
+  let source = null, pixels = null, ground = null, found = null, chosen = new Set(), busy = false;
+
+  const note = (message, error = false) => {
+    $('pt-status').textContent = message;
+    $('pt-status').classList.toggle('error', error);
+  };
+  function figureCanvas(figure) {
+    const out = document.createElement('canvas'); out.width = figure.width; out.height = figure.height;
+    const image = new ImageData(figure.width, figure.height);
+    const { width } = pixels, { labels } = found;
+    for (let y = 0; y < figure.height; y++) for (let x = 0; x < figure.width; x++) {
+      const p = (figure.y + y) * width + figure.x + x;
+      if (labels[p] !== figure.id) continue;
+      const edge = labels[p - 1] !== figure.id || labels[p + 1] !== figure.id ||
+        labels[p - width] !== figure.id || labels[p + width] !== figure.id;
+      const o = (y * figure.width + x) * 4;
+      image.data.set(pixels.data.subarray(p * 4, p * 4 + 3), o);
+      image.data[o + 3] = edge ? 150 : 255; // kenarı yumuşat
+    }
+    out.getContext('2d').putImageData(image, 0, 0);
+    return out;
+  }
+  function draw() {
+    ctx.putImageData(pixels, 0, 0);
+    ctx.lineWidth = Math.max(2, canvas.width / 220);
+    for (const figure of found.figures) {
+      ctx.strokeStyle = chosen.has(figure.id) ? '#ffffff' : 'rgba(255,255,255,.35)';
+      ctx.setLineDash(chosen.has(figure.id) ? [] : [6, 5]);
+      ctx.strokeRect(figure.x - 2, figure.y - 2, figure.width + 4, figure.height + 4);
+    }
+    ctx.setLineDash([]);
+  }
+  function analyse(pickDefaults = true) {
+    found = findFigures(pixels.data, pixels.width, pixels.height, ground, Number($('pt-tolerance').value));
+    const limit = maxFigures();
+    if (pickDefaults) chosen = new Set(found.figures.slice(0, Math.min(4, limit)).map(f => f.id));
+    $('pt-ground').style.background = toHex(ground);
+    $('pt-ground-label').textContent = toHex(ground);
+    const box = $('pt-figures'); box.replaceChildren();
+    for (const figure of found.figures) {
+      const button = document.createElement('button');
+      button.type = 'button'; button.dataset.figure = figure.id; button.style.background = toHex(ground);
+      button.setAttribute('aria-pressed', String(chosen.has(figure.id)));
+      button.setAttribute('aria-label', `Figür ${figure.width} × ${figure.height} px`);
+      button.append(figureCanvas(figure)); box.append(button);
+    }
+    draw();
+    $('pt-apply').disabled = chosen.size === 0;
+    if (!found.figures.length) note('Bu zemin renginde figür bulunamadı. Görselde kumaşın zemin rengine tıklayın ya da “Zemin payı”nı değiştirin.', true);
+    else {
+      const longest = Math.max(...found.figures.map(f => Math.max(f.width, f.height)));
+      note(`${found.figures.length} figür bulundu, ${chosen.size} tanesi seçili (en fazla ${limit}). Zemin yanlışsa görselde kumaşın zeminine tıklayın.` +
+        (longest < 300 ? ` En büyük figür ${longest} px: baskı için küçük, daha büyük ve net bir görsel kullanın.` : ''), longest < 300);
+    }
+  }
+  canvas.addEventListener('click', event => {
+    const r = canvas.getBoundingClientRect();
+    const x = Math.min(pixels.width - 1, Math.max(0, Math.floor((event.clientX - r.left) / r.width * pixels.width)));
+    const y = Math.min(pixels.height - 1, Math.max(0, Math.floor((event.clientY - r.top) / r.height * pixels.height)));
+    // Tek piksel yerine 5×5 ortalama: baskı noktası ve gürültüye takılmasın.
+    let sum = [0, 0, 0], n = 0;
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+      const px = x + dx, py = y + dy;
+      if (px < 0 || py < 0 || px >= pixels.width || py >= pixels.height) continue;
+      const i = (py * pixels.width + px) * 4;
+      sum = [sum[0] + pixels.data[i], sum[1] + pixels.data[i + 1], sum[2] + pixels.data[i + 2]]; n++;
+    }
+    ground = sum.map(v => v / n);
+    analyse();
+  });
+  $('pt-tolerance').addEventListener('input', event => { $('pt-tolerance-val').textContent = event.target.value; analyse(); });
+  $('pt-figures').addEventListener('click', event => {
+    const button = event.target.closest('[data-figure]');
+    if (!button) return;
+    const id = Number(button.dataset.figure);
+    if (chosen.has(id)) chosen.delete(id);
+    else if (chosen.size >= maxFigures()) { note(`En fazla ${maxFigures()} figür alınabilir; önce birinin seçimini kaldırın.`, true); return; }
+    else chosen.add(id);
+    analyse(false);
+  });
+  $('pt-keep').addEventListener('click', () => dialog.close());
+  $('pt-close').addEventListener('click', () => dialog.close());
+  $('pt-apply').addEventListener('click', async () => {
+    if (busy || !chosen.size) return;
+    busy = true; $('pt-apply').disabled = true;
+    try {
+      const figures = found.figures.filter(f => chosen.has(f.id)).map(f => {
+        const c = figureCanvas(f);
+        return { dataUrl: c.toDataURL('image/png'), width: c.width, height: c.height };
+      });
+      await onApply(source.asset.id, figures, toHex(ground));
+      dialog.close();
+    } catch (error) { note(`Desen alınamadı: ${error.message}`, true); $('pt-apply').disabled = false; }
+    finally { busy = false; }
+  });
+
+  return {
+    open(asset, image) {
+      source = { asset, image };
+      const k = Math.min(1, MAX_ANALYSIS / Math.max(image.naturalWidth, image.naturalHeight));
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * k));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * k));
+      const work = document.createElement('canvas'); work.width = canvas.width; work.height = canvas.height;
+      const wctx = work.getContext('2d', { willReadFrequently: true });
+      wctx.drawImage(image, 0, 0, work.width, work.height);
+      pixels = wctx.getImageData(0, 0, work.width, work.height);
+      ground = guessGround(pixels.data, pixels.width, pixels.height, Number($('pt-tolerance').value)) || toRgb('#FFFFFF');
+      dialog.showModal();
+      analyse();
+    },
+  };
+}
+
+return { findFigures, guessGround, initPattern };
+})();
+
 /* ---- app.js ---- */
 const __app = (() => {
 'use strict';
@@ -2171,6 +2393,7 @@ const { LIMITS, MOTIFS, PAPER, COLOR, GROUND_NAMES, AUDIENCES, clone, defaultPro
 const { initAtolye } = __atolye;
 const { initRecolor } = __recolor;
 const { initFigure } = __figur;
+const { initPattern } = __desen;
 const { escapeHTML: e, motifIcon, garmentSVG, swatchSVG, printSheetsHTML, productLabel, setAssetRenderSources } = __render;
 
 const $ = id => document.getElementById(id);
@@ -2192,6 +2415,7 @@ let printBusy = false;
 let operationGeneration = 0;
 let printRevision = -1;
 let lastAutosave = Promise.resolve();
+let patternTool = null;
 const decodedAssets = new Map();
 const renderAssetURLs = new Map();
 
@@ -2299,7 +2523,8 @@ function renderAssets() {
     <img src="${e(asset.dataUrl)}" alt="" width="37" height="37">
     <div><strong>${e(asset.name)}</strong><small>${asset.width} × ${asset.height} px</small><div class="asset-actions">
       ${asset.mime === 'image/png' ? `<button class="text-button" type="button" data-asset-motif="${e(asset.id)}" aria-pressed="${project.composition.motifs.includes(`asset:${asset.id}`)}">${project.composition.motifs.includes(`asset:${asset.id}`) ? '✓ Motif seçili' : 'Motif olarak seç'}</button>` : ''}
-      <button class="text-button" type="button" data-asset-figure="${e(asset.id)}">Figür seç</button>
+      <button class="text-button" type="button" data-asset-pattern="${e(asset.id)}">Deseni al</button>
+      <button class="text-button" type="button" data-asset-figure="${e(asset.id)}">Elle figür seç</button>
       <button class="text-button" type="button" data-asset-recolor="${e(asset.id)}">Renkleri değiştir</button>
       <button class="text-button" type="button" data-asset-tile="${e(asset.id)}">${project.composition.mode === 'raster' && project.composition.rasterAssetId === asset.id ? '✓ Bütün desen' : 'Bütün desen yap'}</button>
     </div></div><button class="icon-button" type="button" data-delete-asset="${e(asset.id)}" aria-label="${e(asset.name)} görselini sil">×</button>
@@ -2601,6 +2826,8 @@ async function uploadImage(file) {
     decodedAssets.set(asset.id, image);
     renderAssets(); renderMotifs();
     changed('Desen eklendi. Altındaki düğmelerle içinden figür seçebilir ya da renklerini değiştirebilirsiniz.');
+    // Zemini opak görsel (fotoğraf, stok önizleme): yalnız figürleri almayı hemen öner.
+    if (candidate.composition.mode === 'raster' && patternTool) patternTool.open(asset, image);
   } catch (error) { status(`Görsel yüklenemedi: ${error.message}`, true); }
   finally { $('image-upload').disabled = false; $('image-upload').value = ''; }
 }
@@ -2622,6 +2849,29 @@ async function applyAtolye({ dataUrl, width, height, repeatWidthCm, repeatHeight
   decodedAssets.set(ATOLYE_ASSET, image);
   renderAssets(); renderMotifs();
   changed(`Çizdiğiniz raport ortak desen oldu (${repeatWidthCm} × ${repeatHeightCm} cm). Zemin rengi tüm varyantlarda ayrı ayrı değiştirilebilir.`);
+}
+/** "Deseni al": kaynak görseli kaldırır, seçilen figürleri tek motif takımı yapar, zemini eşler. */
+async function applyPattern(sourceId, figures, groundHex) {
+  if (!project.assets.some(a => a.id === sourceId)) throw new Error('Kaynak görsel artık projede yok.');
+  if (project.assets.length - 1 + figures.length > LIMITS.assets) throw new Error('En fazla 8 görsel eklenebilir; daha az figür seçin.');
+  const added = [];
+  for (const [index, figure] of figures.entries()) {
+    const asset = { id: newId('img'), name: `Figür ${index + 1}`, mime: 'image/png', ...figure };
+    added.push([asset, await verifyAsset(asset)]);
+  }
+  const candidate = clone(project);
+  candidate.assets = [...candidate.assets.filter(a => a.id !== sourceId), ...added.map(([asset]) => asset)];
+  const c = candidate.composition;
+  c.mode = 'motifs';
+  c.motifs = added.map(([asset]) => `asset:${asset.id}`);
+  if (c.rasterAssetId === sourceId) c.rasterAssetId = null;
+  candidate.background = groundHex;
+  project = validateProject(candidate);
+  syncAssetSources();
+  decodedAssets.delete(sourceId);
+  for (const [asset, image] of added) decodedAssets.set(asset.id, image);
+  renderAssets(); renderMotifs();
+  changed(`${added.length} figür desen olarak alındı; zemin rengi görseldeki kumaşa eşlendi. Kaynak görsel projeden çıkarıldı.`);
 }
 /** Kesilen figürü şeffaf PNG motif olarak ekler; kaynak görsel olduğu gibi kalır. */
 async function applyFigure(sourceId, { dataUrl, width, height }) {
@@ -2780,16 +3030,21 @@ function bindEvents() {
   });
   $('open-atolye').addEventListener('click', () => atolye.open());
   const recolorTool = initRecolor({ getBackground: () => project.background, onApply: applyRecolor });
+  patternTool = initPattern({
+    onApply: applyPattern,
+    maxFigures: () => Math.max(1, Math.min(6, LIMITS.assets - project.assets.length + 1)),
+  });
   const figureTool = initFigure({ getBackground: () => project.background, onApply: applyFigure });
   $('asset-list').addEventListener('click', async event => {
-    const button = event.target.closest('[data-asset-recolor], [data-asset-figure]');
+    const button = event.target.closest('[data-asset-recolor], [data-asset-figure], [data-asset-pattern]');
     if (!button) return;
     const figure = button.dataset.assetFigure !== undefined;
-    const asset = project.assets.find(a => a.id === (figure ? button.dataset.assetFigure : button.dataset.assetRecolor));
+    const pattern = button.dataset.assetPattern !== undefined;
+    const asset = project.assets.find(a => a.id === (button.dataset.assetPattern ?? button.dataset.assetFigure ?? button.dataset.assetRecolor));
     if (!asset) return;
     try {
       if (!decodedAssets.has(asset.id)) decodedAssets.set(asset.id, await verifyAsset(asset));
-      (figure ? figureTool : recolorTool).open(asset, decodedAssets.get(asset.id));
+      (pattern ? patternTool : figure ? figureTool : recolorTool).open(asset, decodedAssets.get(asset.id));
     } catch (error) { status(`Görsel açılamadı: ${error.message}`, true); }
   });
   $('asset-list').addEventListener('click', event => {

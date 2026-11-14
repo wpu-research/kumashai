@@ -262,6 +262,25 @@
       </div>
     </div>
   </dialog>
+  <dialog id="pattern-dialog" data-testid="pattern-dialog" aria-labelledby="pattern-title">
+    <div class="dialog-heading">
+      <div><span class="eyebrow">DESENİ AL</span><h2 id="pattern-title">Görselden yalnız deseni alın</h2></div>
+      <button id="pt-close" class="icon-button" aria-label="Kapat" type="button">×</button>
+    </div>
+    <p class="small at-status" id="pt-status" data-testid="pt-status" role="status" aria-live="polite"></p>
+    <div class="rc-grid">
+      <div class="rc-stage"><canvas id="pt-canvas" data-testid="pt-canvas" aria-label="Kumaşın zemin rengine tıklayın"></canvas></div>
+      <div class="rc-side">
+        <div class="at-row"><label>Kumaş zemini</label><i class="rc-from" id="pt-ground"></i><span class="at-val" id="pt-ground-label"></span></div>
+        <div class="at-row"><label for="pt-tolerance">Zemin payı</label><input type="range" id="pt-tolerance" min="15" max="110" value="48"><span class="at-val" id="pt-tolerance-val">48</span></div>
+        <h3 class="small-heading pt-heading">BULUNAN FİGÜRLER <span class="hint">— alınacaklara dokunun</span></h3>
+        <div class="pt-figures" id="pt-figures" data-testid="pt-figures"></div>
+        <p class="small muted">Zemin rengiyle çevrili figürler alınır; masa, arka plan ve kenarda yarım kalanlar alınmaz. Yalnız kullanım hakkı sizde olan görsellerde kullanın; lisanslı karakterler izinsiz basılamaz.</p>
+        <button class="button primary full" id="pt-apply" data-testid="pt-apply" type="button" disabled>Deseni al</button>
+        <button class="button subtle full" id="pt-keep" data-testid="pt-keep" type="button">Görseli olduğu gibi kullan</button>
+      </div>
+    </div>
+  </dialog>
   <noscript>Bu yerel stüdyoyu kullanmak için JavaScript etkin olmalıdır.</noscript>
 </body>
 </html>

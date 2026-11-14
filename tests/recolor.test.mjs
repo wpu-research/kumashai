@@ -84,3 +84,21 @@ test('grup: eski kayıt çocuk olarak açılır; geçersiz grup reddedilir; föy
   for (const group of Object.values(AUDIENCES)) for (const product of group.products) assert.ok(PRODUCTS[product]);
   assert.ok(printSheetsHTML({ ...defaultProject(), audience: 'kadin' }).includes('<strong>Grup:</strong> Kadın'));
 });
+
+test('deseni al: zeminle çevrili figürler bulunur; kenara ve kumaş dışına değenler alınmaz', async () => {
+  const { findFigures, guessGround } = await import('../web/desen.js');
+  // 40×30 "fotoğraf": kahverengi masa, ortada turkuaz kumaş (x 6..33, y 4..25),
+  // kumaşın içinde iki sarı figür (6×6), kumaş kenarında yarım kalmış bir figür.
+  const w = 40, h = 30, data = new Uint8ClampedArray(w * h * 4);
+  const put = (x0, y0, x1, y1, rgb) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) data.set([...rgb, 255], (y * w + x) * 4); };
+  put(0, 0, w - 1, h - 1, [120, 80, 50]);
+  put(6, 4, 33, 25, [70, 215, 215]);
+  put(10, 8, 15, 13, [240, 200, 40]);
+  put(22, 14, 27, 19, [240, 200, 40]);
+  put(30, 20, 35, 25, [240, 200, 40]); // kumaştan taşıyor: masaya değer
+  const ground = guessGround(data, w, h, 48);
+  assert.ok(Math.abs(ground[0] - 70) < 8 && Math.abs(ground[1] - 215) < 8, 'zemin turkuaz olmalı');
+  const { figures, labels } = findFigures(data, w, h, ground, 48);
+  assert.deepEqual(figures.map(f => [f.x, f.y, f.width, f.height]).sort(), [[10, 8, 6, 6], [22, 14, 6, 6]]);
+  assert.equal(labels[8 * w + 10], figures.find(f => f.x === 10).id);
+});

@@ -80,7 +80,14 @@ zeminini (ör. şeker pembesi, mint, ekru) kullanabilirsiniz. Sonuç ayrı bir P
 olarak eklenir (en uzun kenar 1600 px), özgün dosya durur. Düz renkli baskılarda
 iyi çalışır; fotoğraf ve yumuşak geçişli görsellerde sonuç kabadır.
 
-**Figür seç** (her görselin altında): görselde bir figürün etrafına kutu çizin;
+**Deseni al:** zemini şeffaf olmayan bir görsel (ürün fotoğrafı, stok önizleme)
+yüklenince kendiliğinden açılır. Kumaşın zemin rengini bulur, zeminle çevrili
+figürleri ayırır; masa, arka plan ve kenarda yarım kalan figürler alınmaz.
+Seçilen figürler (en fazla 6) motif olur, proje zemini kumaşın rengine eşlenir
+ve kaynak görsel projeden çıkarılır. Zemin yanlış bulunursa görselde kumaşın
+zeminine tıklayın. "Görseli olduğu gibi kullan" eski davranışı korur.
+
+**Elle figür seç** (her görselin altında): görselde bir figürün etrafına kutu çizin;
 kutunun kenarındaki zemin rengi silinir ve figür şeffaf motif olarak eklenir.
 Düz zeminli, büyük ve net desen görsellerinde iyi çalışır; giysi fotoğrafından
 (kırışık, gölge, düşük çözünürlük) kesilen figür baskıya uygun olmaz. Yalnız

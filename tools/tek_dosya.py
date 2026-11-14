@@ -10,7 +10,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "web"
-ORDER = ["design", "render", "atolye", "recolor", "figur", "app"]  # bağımlılık sırası
+ORDER = ["design", "render", "atolye", "recolor", "figur", "desen", "app"]  # bağımlılık sırası
 IMPORT = re.compile(r"^import\s*\{([^}]*)\}\s*from\s*'\./(\w+)\.js';[ \t]*\n", re.MULTILINE)
 EXPORT = re.compile(r"^export\s+((?:async\s+)?function\*?|const|let|class)\s+([A-Za-z_$][\w$]*)", re.MULTILINE)
 

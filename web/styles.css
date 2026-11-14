@@ -452,3 +452,12 @@ dialog::backdrop { background: #24372b55; backdrop-filter: blur(3px); }
 
 .audience { margin-bottom: 14px; }
 .audience button { font-size: 13px; padding: 9px 4px; }
+
+/* ---------- Deseni al ---------- */
+#pattern-dialog { width: min(1000px, calc(100vw - 24px)); max-height: calc(100vh - 24px); padding: 20px; }
+#pt-canvas { max-width: 100%; max-height: 64vh; display: block; cursor: crosshair; }
+.pt-heading { margin: 14px 0 8px; }
+.pt-figures { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.pt-figures button { aspect-ratio: 1; border: 2px solid var(--line); border-radius: 8px; padding: 5px; display: grid; place-items: center; opacity: .55; }
+.pt-figures button[aria-pressed="true"] { border-color: var(--green); opacity: 1; box-shadow: 0 0 0 2px var(--green-light); }
+.pt-figures canvas { max-width: 100%; max-height: 100%; width: auto; height: 100%; object-fit: contain; }

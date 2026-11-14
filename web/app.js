@@ -6,6 +6,7 @@ import {
 import { initAtolye } from './atolye.js';
 import { initRecolor } from './recolor.js';
 import { initFigure } from './figur.js';
+import { initPattern } from './desen.js';
 import { escapeHTML as e, motifIcon, garmentSVG, swatchSVG, printSheetsHTML, productLabel, setAssetRenderSources } from './render.js';
 
 const $ = id => document.getElementById(id);
@@ -27,6 +28,7 @@ let printBusy = false;
 let operationGeneration = 0;
 let printRevision = -1;
 let lastAutosave = Promise.resolve();
+let patternTool = null;
 const decodedAssets = new Map();
 const renderAssetURLs = new Map();
 
@@ -134,7 +136,8 @@ function renderAssets() {
     <img src="${e(asset.dataUrl)}" alt="" width="37" height="37">
     <div><strong>${e(asset.name)}</strong><small>${asset.width} × ${asset.height} px</small><div class="asset-actions">
       ${asset.mime === 'image/png' ? `<button class="text-button" type="button" data-asset-motif="${e(asset.id)}" aria-pressed="${project.composition.motifs.includes(`asset:${asset.id}`)}">${project.composition.motifs.includes(`asset:${asset.id}`) ? '✓ Motif seçili' : 'Motif olarak seç'}</button>` : ''}
-      <button class="text-button" type="button" data-asset-figure="${e(asset.id)}">Figür seç</button>
+      <button class="text-button" type="button" data-asset-pattern="${e(asset.id)}">Deseni al</button>
+      <button class="text-button" type="button" data-asset-figure="${e(asset.id)}">Elle figür seç</button>
       <button class="text-button" type="button" data-asset-recolor="${e(asset.id)}">Renkleri değiştir</button>
       <button class="text-button" type="button" data-asset-tile="${e(asset.id)}">${project.composition.mode === 'raster' && project.composition.rasterAssetId === asset.id ? '✓ Bütün desen' : 'Bütün desen yap'}</button>
     </div></div><button class="icon-button" type="button" data-delete-asset="${e(asset.id)}" aria-label="${e(asset.name)} görselini sil">×</button>
@@ -436,6 +439,8 @@ async function uploadImage(file) {
     decodedAssets.set(asset.id, image);
     renderAssets(); renderMotifs();
     changed('Desen eklendi. Altındaki düğmelerle içinden figür seçebilir ya da renklerini değiştirebilirsiniz.');
+    // Zemini opak görsel (fotoğraf, stok önizleme): yalnız figürleri almayı hemen öner.
+    if (candidate.composition.mode === 'raster' && patternTool) patternTool.open(asset, image);
   } catch (error) { status(`Görsel yüklenemedi: ${error.message}`, true); }
   finally { $('image-upload').disabled = false; $('image-upload').value = ''; }
 }
@@ -457,6 +462,29 @@ async function applyAtolye({ dataUrl, width, height, repeatWidthCm, repeatHeight
   decodedAssets.set(ATOLYE_ASSET, image);
   renderAssets(); renderMotifs();
   changed(`Çizdiğiniz raport ortak desen oldu (${repeatWidthCm} × ${repeatHeightCm} cm). Zemin rengi tüm varyantlarda ayrı ayrı değiştirilebilir.`);
+}
+/** "Deseni al": kaynak görseli kaldırır, seçilen figürleri tek motif takımı yapar, zemini eşler. */
+async function applyPattern(sourceId, figures, groundHex) {
+  if (!project.assets.some(a => a.id === sourceId)) throw new Error('Kaynak görsel artık projede yok.');
+  if (project.assets.length - 1 + figures.length > LIMITS.assets) throw new Error('En fazla 8 görsel eklenebilir; daha az figür seçin.');
+  const added = [];
+  for (const [index, figure] of figures.entries()) {
+    const asset = { id: newId('img'), name: `Figür ${index + 1}`, mime: 'image/png', ...figure };
+    added.push([asset, await verifyAsset(asset)]);
+  }
+  const candidate = clone(project);
+  candidate.assets = [...candidate.assets.filter(a => a.id !== sourceId), ...added.map(([asset]) => asset)];
+  const c = candidate.composition;
+  c.mode = 'motifs';
+  c.motifs = added.map(([asset]) => `asset:${asset.id}`);
+  if (c.rasterAssetId === sourceId) c.rasterAssetId = null;
+  candidate.background = groundHex;
+  project = validateProject(candidate);
+  syncAssetSources();
+  decodedAssets.delete(sourceId);
+  for (const [asset, image] of added) decodedAssets.set(asset.id, image);
+  renderAssets(); renderMotifs();
+  changed(`${added.length} figür desen olarak alındı; zemin rengi görseldeki kumaşa eşlendi. Kaynak görsel projeden çıkarıldı.`);
 }
 /** Kesilen figürü şeffaf PNG motif olarak ekler; kaynak görsel olduğu gibi kalır. */
 async function applyFigure(sourceId, { dataUrl, width, height }) {
@@ -615,16 +643,21 @@ function bindEvents() {
   });
   $('open-atolye').addEventListener('click', () => atolye.open());
   const recolorTool = initRecolor({ getBackground: () => project.background, onApply: applyRecolor });
+  patternTool = initPattern({
+    onApply: applyPattern,
+    maxFigures: () => Math.max(1, Math.min(6, LIMITS.assets - project.assets.length + 1)),
+  });
   const figureTool = initFigure({ getBackground: () => project.background, onApply: applyFigure });
   $('asset-list').addEventListener('click', async event => {
-    const button = event.target.closest('[data-asset-recolor], [data-asset-figure]');
+    const button = event.target.closest('[data-asset-recolor], [data-asset-figure], [data-asset-pattern]');
     if (!button) return;
     const figure = button.dataset.assetFigure !== undefined;
-    const asset = project.assets.find(a => a.id === (figure ? button.dataset.assetFigure : button.dataset.assetRecolor));
+    const pattern = button.dataset.assetPattern !== undefined;
+    const asset = project.assets.find(a => a.id === (button.dataset.assetPattern ?? button.dataset.assetFigure ?? button.dataset.assetRecolor));
     if (!asset) return;
     try {
       if (!decodedAssets.has(asset.id)) decodedAssets.set(asset.id, await verifyAsset(asset));
-      (figure ? figureTool : recolorTool).open(asset, decodedAssets.get(asset.id));
+      (pattern ? patternTool : figure ? figureTool : recolorTool).open(asset, decodedAssets.get(asset.id));
     } catch (error) { status(`Görsel açılamadı: ${error.message}`, true); }
   });
   $('asset-list').addEventListener('click', event => {

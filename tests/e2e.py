@@ -144,6 +144,10 @@ class StudioBrowserTests(unittest.TestCase):
         self.page.get_by_test_id("image-upload").set_input_files({
             "name": name, "mimeType": mime, "buffer": data,
         })
+        # Opak görselde "Deseni al" penceresi kendiliğinden açılır; bu testler görseli olduğu gibi kullanır.
+        expect(self.page.get_by_test_id("image-upload")).to_be_enabled()
+        if self.page.evaluate("document.getElementById('pattern-dialog').open"):
+            self.page.get_by_test_id("pt-keep").click()
 
     def pdf_info(self, path):
         text = subprocess.check_output(["pdfinfo", str(path)], text=True)
