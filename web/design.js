@@ -21,9 +21,16 @@ export const MOTIFS = Object.freeze({
 });
 export const PRODUCTS = Object.freeze({
   tank: 'Atlet',
+  cami: 'Askılı atlet',
   'brief-front': 'Külot · ön',
   'brief-back': 'Külot · arka',
   boxer: 'Boxer',
+});
+/** Kimin için: ürün listesini süzer ve föyde yazılır. */
+export const AUDIENCES = Object.freeze({
+  kadin: Object.freeze({ label: 'Kadın', products: Object.freeze(['cami', 'tank', 'brief-front', 'brief-back']) }),
+  erkek: Object.freeze({ label: 'Erkek', products: Object.freeze(['tank', 'boxer']) }),
+  cocuk: Object.freeze({ label: 'Çocuk', products: Object.freeze(['tank', 'cami', 'brief-front', 'brief-back', 'boxer']) }),
 });
 export const PACKS = Object.freeze({
   single: 'Tek ürün',
@@ -34,6 +41,11 @@ export const PACKS = Object.freeze({
 export const PAPER = Object.freeze({
   A5: { width: 148, height: 210, capacity: 6 },
   A6: { width: 105, height: 148, capacity: 3 },
+});
+/** Hazır zemin önerileri; ekran rengi baskı/boya garantisi değildir. */
+export const GROUND_NAMES = Object.freeze({
+  '#F9C9D4': 'Şeker pembesi', '#BFE8D4': 'Mint yeşili', '#F1E9D8': 'Ekru',
+  '#F4EEE2': 'Vanilya', '#E3EBE2': 'Adaçayı', '#F2DBD1': 'Pudra', '#DEE6EB': 'Buz mavisi', '#F3E5BA': 'Saman',
 });
 export const COLOR = /^#[0-9a-fA-F]{6}$/;
 const ID = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,47}$/;
@@ -47,6 +59,7 @@ export function defaultProject() {
     name: 'Kır Bahçesi',
     designCode: 'KMS-026',
     company: 'Kumash Tekstil',
+    audience: 'cocuk',
     size: '',
     fabric: '',
     palette: [
@@ -168,19 +181,20 @@ export function validateDimensions(width, height) {
   return { width, height };
 }
 
-/** Beden/kumaş alanları sonradan eklendi; eski sürüm 1 kayıtları boş değerle açılır. */
+/** Grup/beden/kumaş alanları sonradan eklendi; eski sürüm 1 kayıtları varsayılanla açılır. */
 function withSpecDefaults(project) {
   if (!project || typeof project !== 'object' || Array.isArray(project)) return project;
-  return { size: '', fabric: '', ...project };
+  return { audience: 'cocuk', size: '', fabric: '', ...project };
 }
 export function validateProject(project) {
   project = withSpecDefaults(project);
-  record(project, ['version', 'name', 'designCode', 'company', 'size', 'fabric', 'palette', 'composition', 'assets',
+  record(project, ['version', 'name', 'designCode', 'company', 'audience', 'size', 'fabric', 'palette', 'composition', 'assets',
     'background', 'trim', 'product', 'pack', 'selectedBackgrounds', 'variants', 'presentation'], 'Proje');
   if (project.version !== 1) fail('Desteklenmeyen proje sürümü. Sürüm 1 gerekli.');
   text(project.name, 80, 'Proje adı');
   text(project.designCode, 40, 'Desen kodu');
   text(project.company, 80, 'Firma adı');
+  enumeration(project.audience, Object.keys(AUDIENCES), 'Grup');
   text(project.size, 40, 'Beden', true);
   text(project.fabric, 80, 'Kumaş', true);
   array(project.palette, 1, LIMITS.palette, 'Palet');
@@ -332,4 +346,21 @@ export function printPalette(project, variants = project.variants) {
     add(v.trim, `Biye ${i + 1}`);
   });
   return result;
+}
+
+/** Föydeki renk kareleri: R1… desen renkleri, F1… o sayfadaki ürünlerin zeminleri. */
+export function sheetColors(project, variants = project.variants) {
+  const design = project.palette.map((p, i) => ({ label: `R${i + 1}`, name: p.name, code: p.code, color: p.color }));
+  const grounds = [];
+  for (const v of variants) {
+    const color = v.background.toUpperCase();
+    if (!grounds.some(g => g.color === color))
+      grounds.push({ label: `F${grounds.length + 1}`, name: GROUND_NAMES[color] || color, code: '', color });
+  }
+  return { design, grounds };
+}
+/** Koyu renk üstünde beyaz, açık renk üstünde koyu yazı. */
+export function readableInk(color) {
+  const [r, g, b] = [1, 3, 5].map(i => parseInt(color.slice(i, i + 2), 16));
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.62 ? '#22262A' : '#FFFFFF';
 }

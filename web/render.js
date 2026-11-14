@@ -1,4 +1,4 @@
-import { compositionLayout, wrappedPlacements, paginateVariants, printPalette, PRODUCTS } from './design.js';
+import { compositionLayout, wrappedPlacements, paginateVariants, sheetColors, readableInk, PRODUCTS, AUDIENCES } from './design.js';
 
 let serial = 0;
 const uid = () => `kms-${++serial}`;
@@ -93,46 +93,58 @@ function patternDefinitions(project, background, prefix, tileScale) {
     </pattern></defs>`;
 }
 
+// band: biye renginde dolu lastik bel; ribs: bandın orta çizgisi (fitil dokusu için).
 const SHAPES = {
   tank: {
     body: 'M48 28 L76 18 Q78 59 100 59 Q122 59 124 18 L152 28 L151 56 Q150 82 174 93 L165 229 Q100 243 35 229 L26 93 Q50 82 49 56Z',
     trim: 'M76 18 Q78 59 100 59 Q122 59 124 18 M48 28 L49 56 Q50 82 26 93 M152 28 L151 56 Q150 82 174 93',
-    seam: 'M39 221 Q100 234 161 221',
+    seam: 'M39 221 Q100 234 161 221 M39 217 Q100 230 161 217',
+  },
+  cami: {
+    body: 'M61 18 L68 18 L70 62 Q100 78 130 62 L132 18 L139 18 L141 60 Q150 80 166 84 L160 229 Q100 242 40 229 L34 84 Q50 80 59 60Z',
+    trim: 'M64.5 14 L64.5 61 M135.5 14 L135.5 61 M70 62 Q100 78 130 62 M141 60 Q150 80 166 84 M59 60 Q50 80 34 84',
+    seam: 'M43 221 Q100 233 157 221 M43 217 Q100 229 157 217',
   },
   'brief-front': {
     body: 'M23 76 Q100 88 177 76 L162 129 Q135 141 120 187 L80 187 Q65 141 38 129Z',
-    trim: 'M23 76 Q100 88 177 76 M38 129 Q65 141 80 187 L120 187 Q135 141 162 129',
-    seam: 'M79 173 Q100 178 121 173',
+    trim: 'M38 129 Q65 141 80 187 L120 187 Q135 141 162 129',
+    band: 'M15 76 Q100 88 185 76 L185 85 Q100 97 15 85Z',
+    ribs: 'M15 80.5 Q100 92.5 185 80.5', ribWidth: 9,
+    seam: 'M79 173 Q100 178 121 173 M20 87.5 Q100 99.5 180 87.5',
   },
   'brief-back': {
     body: 'M23 76 Q100 85 177 76 L165 139 Q147 156 128 186 Q100 194 72 186 Q53 156 35 139Z',
-    trim: 'M23 76 Q100 85 177 76 M35 139 Q53 156 72 186 Q100 194 128 186 Q147 156 165 139',
-    seam: 'M100 91 L100 177',
+    trim: 'M35 139 Q53 156 72 186 Q100 194 128 186 Q147 156 165 139',
+    band: 'M15 76 Q100 85 185 76 L185 85 Q100 94 15 85Z',
+    ribs: 'M15 80.5 Q100 89.5 185 80.5', ribWidth: 9,
+    seam: 'M100 97 L100 177 M20 87.5 Q100 96.5 180 87.5',
   },
   boxer: {
     body: 'M37 49 Q100 59 163 49 L174 210 Q140 217 108 210 L100 151 L92 210 Q60 217 26 210Z',
-    trim: 'M37 49 Q100 59 163 49 M26 210 Q60 217 92 210 M108 210 Q140 217 174 210',
-    seam: 'M81 65 L81 125 Q100 147 119 125 L119 65 M100 65 L100 136',
+    trim: '',
+    band: 'M28 49 Q100 59 172 49 L172 62 Q100 72 28 62Z',
+    ribs: 'M28 55.5 Q100 65.5 172 55.5', ribWidth: 13,
+    seam: 'M81 68 L81 125 Q100 147 119 125 L119 68 M100 68 L100 136 M32 64.5 Q100 74.5 168 64.5'
+      + ' M27 203 Q60 210 92 203 M108 203 Q140 210 173 203 M27 199.5 Q60 206.5 92 199.5 M108 199.5 Q140 206.5 173 199.5',
   },
 };
 
 export function productLabel(variant) {
-  if (variant.pack === 'set') return variant.product === 'boxer' ? 'Atlet + boxer takım' : 'Atlet + külot takım';
+  if (variant.pack === 'set') return `${variant.product === 'cami' ? 'Askılı atlet' : 'Atlet'} + ${variant.product === 'boxer' ? 'boxer' : 'külot'} takım`;
   return `${PRODUCTS[variant.product]}${variant.pack === 'single' ? '' : ` · ${variant.pack}’li paket`}`;
 }
 function garmentItems(variant) {
-  if (variant.pack === 'set') return ['tank', variant.product === 'boxer' ? 'boxer' : variant.product === 'brief-back' ? 'brief-back' : 'brief-front'];
+  if (variant.pack === 'set') return [variant.product === 'cami' ? 'cami' : 'tank',
+    variant.product === 'boxer' ? 'boxer' : variant.product === 'brief-back' ? 'brief-back' : 'brief-front'];
   return Array.from({ length: variant.pack === 'single' ? 1 : Number(variant.pack) }, () => variant.product);
 }
-export function garmentSVG(project, variant, className = '') {
+// Kalıpların 200×250 kutusundaki dolu alanı: takım üst üste dizilirken boşluk kalmasın.
+const EXTENT = { tank: [18, 243], cami: [18, 237], 'brief-front': [76, 187], 'brief-back': [76, 194], boxer: [49, 217] };
+/** stack=true: föy düzeni; takım üstte atlet, altta alt parça olacak şekilde dizilir. */
+export function garmentSVG(project, variant, className = '', stack = false) {
   const prefix = uid();
   const items = garmentItems(variant);
   const count = items.length;
-  const columns = count === 1 ? 1 : count <= 3 ? count : 3;
-  const rows = Math.ceil(count / columns);
-  const cellW = 360 / columns;
-  const cellH = 300 / rows;
-  const scale = Math.min(cellW / 205, cellH / 250);
   const types = [...new Set(items)];
   const defs = types.map(type => {
     const s = SHAPES[type];
@@ -142,19 +154,35 @@ export function garmentSVG(project, variant, className = '') {
         <g clip-path="url(#${clipId})">
           <rect width="200" height="250" fill="url(#${prefix}-pattern)"/>
           <path d="${s.trim}" stroke="${escapeHTML(variant.trim)}" stroke-width="12" fill="none"/>
+          ${s.band ? `<path d="${s.band}" fill="${escapeHTML(variant.trim)}"/>
+          <path d="${s.ribs}" stroke="#000" opacity=".17" stroke-width="${s.ribWidth}" stroke-dasharray=".8 2.4" fill="none"/>` : ''}
           <path d="${s.seam}" stroke="#263F35" opacity=".3" stroke-width="1.4" stroke-dasharray="3 2" fill="none"/>
         </g><path d="${s.body}" fill="none" stroke="#34483D" stroke-width="1.1" opacity=".45"/>
       </g>`;
   }).join('');
-  const garments = items.map((type, i) => {
-    const row = Math.floor(i / columns);
-    const inRow = Math.min(columns, count - row * columns);
-    const offset = (360 - inRow * cellW) / 2;
-    const x = offset + (i % columns) * cellW + (cellW - 200 * scale) / 2;
-    const y = row * cellH + (cellH - 250 * scale) / 2;
-    return `<use href="#${prefix}-garment-${type}" transform="translate(${n(x)} ${n(y)}) scale(${n(scale)})"/>`;
-  }).join('');
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 300" class="${escapeHTML(className)}"
+  let width = 360, height = 300, garments;
+  if (stack && variant.pack === 'set') {
+    const [top, bottom] = items;
+    const offset = EXTENT[top][1] + 10 - EXTENT[bottom][0];
+    width = 200; height = offset + EXTENT[bottom][1] - EXTENT[top][0] + 6;
+    garments = `<g transform="translate(0 ${3 - EXTENT[top][0]})"><use href="#${prefix}-garment-${top}"/>
+      <use href="#${prefix}-garment-${bottom}" transform="translate(0 ${offset})"/></g>`;
+  } else {
+    const columns = count === 1 ? 1 : count <= 3 ? count : 3;
+    const rows = Math.ceil(count / columns);
+    const cellW = 360 / columns;
+    const cellH = 300 / rows;
+    const scale = Math.min(cellW / 205, cellH / 250);
+    garments = items.map((type, i) => {
+      const row = Math.floor(i / columns);
+      const inRow = Math.min(columns, count - row * columns);
+      const offset = (360 - inRow * cellW) / 2;
+      const x = offset + (i % columns) * cellW + (cellW - 200 * scale) / 2;
+      const y = row * cellH + (cellH - 250 * scale) / 2;
+      return `<use href="#${prefix}-garment-${type}" transform="translate(${n(x)} ${n(y)}) scale(${n(scale)})"/>`;
+    }).join('');
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${n(height)}" class="${escapeHTML(className)}"
     role="img" aria-label="${escapeHTML(productLabel(variant))}" data-composition-seed="${project.composition.seed}">
     ${patternDefinitions(project, variant.background, prefix, 0.35)}<defs>${defs}</defs>${garments}</svg>`;
 }
@@ -169,44 +197,56 @@ export function swatchSVG(project, background = project.background, className = 
     <rect width="${layout.width}" height="${n(layout.height)}" fill="url(#${prefix}-pattern)"/></svg>`;
 }
 
+// Desen kutusunun sığacağı en büyük alan (mm): [en, boy].
+const SWATCH_BOX = { 'A5-landscape': [66, 56], 'A5-portrait': [44, 58], 'A6-landscape': [42, 33], 'A6-portrait': [28, 36] };
+const cm = value => String(value).replace('.', ',');
+function chipRow(title, colors) {
+  return `<div class="sheet-chips"><b>${title}</b><div>${colors.map(c => `<span class="sheet-chip"
+    style="background:${escapeHTML(c.color)};color:${readableInk(c.color)}" title="${escapeHTML(`${c.label} · ${c.name} · ${c.color}`)}">
+    <b>${c.label}</b><i>${escapeHTML(c.name)}</i>${c.code ? `<i>${escapeHTML(c.code)}</i>` : ''}</span>`).join('')}</div></div>`;
+}
+
 export function printSheetsHTML(project) {
   const pages = paginateVariants(project.variants, project.presentation.paper);
   const { paper, orientation } = project.presentation;
+  const c = project.composition;
+  const [maxW, maxH] = SWATCH_BOX[`${paper}-${orientation}`];
+  const ratio = c.repeatWidthCm / c.repeatHeightCm;
+  const swatchW = Math.min(maxW, maxH * ratio), swatchH = swatchW / ratio;
+  const size = project.size.trim(), fabric = project.fabric.trim();
   return pages.map((variants, pageIndex) => {
     const offset = pageIndex * (paper === 'A5' ? 6 : 3);
-    const palette = printPalette(project, variants);
+    const colors = sheetColors(project, variants);
     return `<article class="print-sheet paper-${paper.toLowerCase()} ${orientation}" data-testid="print-sheet" data-page="${pageIndex + 1}">
       <header class="sheet-header">
-        <div><strong>${escapeHTML(project.company)}</strong><span>${escapeHTML(project.name)}</span></div>
-        <div class="sheet-code"><strong>${escapeHTML(project.designCode)}</strong><span>TEKSTİL TASARIM FÖYÜ</span></div>
+        <strong class="sheet-title">DESEN ${escapeHTML(project.designCode)}</strong>
+        <div class="sheet-brand"><span>${escapeHTML(project.name)}</span><strong>${escapeHTML(project.company)}</strong></div>
       </header>
       <div class="sheet-body">
         <aside class="sheet-source">
-          <h3>01 / KAYNAK DESEN</h3>
-          <div class="sheet-swatch">${swatchSVG(project)}</div>
-          <p class="repeat-caption"><strong>Tekrar: ${project.composition.repeatWidthCm} × ${project.composition.repeatHeightCm} cm</strong><br>
-          Ölçekli önizleme · gerçek boy değildir.</p>
-          ${project.size.trim() || project.fabric.trim() ? `<p class="repeat-caption sheet-spec" data-testid="sheet-spec">${
-            project.size.trim() ? `<strong>Beden:</strong> ${escapeHTML(project.size.trim())}` : ''}${
-            project.size.trim() && project.fabric.trim() ? '<br>' : ''}${
-            project.fabric.trim() ? `<strong>Kumaş:</strong> ${escapeHTML(project.fabric.trim())}` : ''}</p>` : ''}
-          <h3>RENK KARTELASI</h3>
-          <div class="sheet-palette">${palette.map(p => `<div class="sheet-color" title="${escapeHTML(`${p.name} · ${p.code || p.color} · ${p.color}`)}">
-            <i style="background:${escapeHTML(p.color)}"></i><div><b>${escapeHTML(p.name)}</b><span>${escapeHTML(p.code || p.color)}</span></div>
-          </div>`).join('')}</div>
-          <p class="sheet-color-note">Kodlar kullanıcı tanımlıdır. Resmî TPX / Pantone eşleşmesi veya baskı renk garantisi değildir.</p>
+          <div class="sheet-original">ORİJİNAL BOY</div>
+          <div class="sheet-swatch-row">
+            <div class="sheet-swatch" style="width:${n(swatchW)}mm;height:${n(swatchH)}mm">${swatchSVG(project)}</div>
+            <span class="sheet-dim-h">${cm(c.repeatHeightCm)} cm</span>
+          </div>
+          <div class="sheet-dim-w" style="width:${n(swatchW)}mm">${cm(c.repeatWidthCm)} cm</div>
+          <p class="sheet-scale-note">Ölçekli önizleme · gerçek boy değildir.</p>
+          ${chipRow('DESEN RENKLERİ', colors.design)}
+          ${chipRow('ZEMİN RENKLERİ', colors.grounds)}
+          <p class="sheet-spec" data-testid="sheet-spec"><strong>Grup:</strong> ${AUDIENCES[project.audience].label}${
+            size ? `<br><strong>Beden:</strong> ${escapeHTML(size)}` : ''}${
+            fabric ? `<br><strong>Kumaş:</strong> ${escapeHTML(fabric)}` : ''}</p>
         </aside>
         <section class="sheet-variants" aria-label="Numaralı ürün varyantları">
           ${variants.map((v, i) => `<div class="sheet-variant" data-variant-id="${escapeHTML(v.id)}">
-            <div class="sheet-variant-head"><b>${String(offset + i + 1).padStart(2, '0')}</b><span>${escapeHTML(v.label)}</span></div>
-            ${garmentSVG(project, v)}
-            <div class="sheet-variant-meta"><strong>${escapeHTML(productLabel(v))}</strong>
-              <span>Z ${escapeHTML(v.background)} · B ${escapeHTML(v.trim)}</span></div>
+            <b class="sheet-variant-title">VARYANT ${offset + i + 1}</b>
+            ${garmentSVG(project, v, '', true)}
+            <span class="sheet-variant-name">${escapeHTML(v.label)} · ${escapeHTML(productLabel(v))}</span>
           </div>`).join('')}
         </section>
       </div>
-      <footer class="sheet-footer"><span>KumashAi · ${escapeHTML(project.designCode)} · Ortak kompozisyon ${project.composition.seed}</span>
-        <span>${paper} ${orientation === 'landscape' ? 'yatay' : 'dikey'} · ${pageIndex + 1} / ${pages.length}</span></footer>
+      <footer class="sheet-footer"><span aria-hidden="true">${escapeHTML(`${project.company} `.repeat(30))}</span>
+        <b>${escapeHTML(project.designCode)} · ${pageIndex + 1} / ${pages.length}</b></footer>
     </article>`;
   }).join('');
 }

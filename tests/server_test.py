@@ -122,5 +122,20 @@ class ServerBoundaryTests(unittest.TestCase):
                 self.assertEqual(self.request(path)[0], 404)
 
 
+class PortableOpenTests(ServerBoundaryTests):
+    """Same boundary tests through the Windows code path (no dir_fd / O_NOFOLLOW)."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.old_mode = server_module.DIR_FD_OPEN
+        server_module.DIR_FD_OPEN = False
+
+    @classmethod
+    def tearDownClass(cls):
+        server_module.DIR_FD_OPEN = cls.old_mode
+        super().tearDownClass()
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

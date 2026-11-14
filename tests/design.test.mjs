@@ -184,7 +184,7 @@ test('print uses scaled-source wording and includes numbering with no extra shee
   const html = printSheetsHTML(p);
   assert.equal([...html.matchAll(/data-testid="print-sheet"/g)].length, 2);
   assert.ok(html.includes('Ölçekli önizleme · gerçek boy değildir.'));
-  assert.ok(html.includes('<b>07</b>'));
+  assert.ok(html.includes('VARYANT 7'));
   p.variants = [];
   assert.equal(printSheetsHTML(p), '');
 });

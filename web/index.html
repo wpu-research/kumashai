@@ -17,13 +17,10 @@
       <div class="workspace-tag"><span class="tiny-dot"></span> Yerel çalışma alanı <span class="tag">01</span></div>
       <div class="sidebar-label">TASARIM AKIŞI</div>
       <nav class="step-nav" aria-label="Tasarım adımları">
-        <button type="button" class="step-button active" data-step="1" data-testid="step-1" aria-current="step"><span class="step-number">01</span><span>Renk paleti<small>Hikâyenin renkleri</small></span><span class="step-arrow">›</span></button>
-        <button type="button" class="step-button" data-step="2" data-testid="step-2"><span class="step-number">02</span><span>Desen & motif<small>Küçük detaylar, büyük fikirler</small></span></button>
-        <button type="button" class="step-button" data-step="3" data-testid="step-3"><span class="step-number">03</span><span>Karıştır<small>Ritmini bul</small></span></button>
-        <button type="button" class="step-button" data-step="4" data-testid="step-4"><span class="step-number">04</span><span>Zemin & biye<small>Son renk dokunuşu</small></span></button>
-        <button type="button" class="step-button" data-step="5" data-testid="step-5"><span class="step-number">05</span><span>Varyantlar<small>Koleksiyonunu oluştur</small></span></button>
-        <button type="button" class="step-button" data-step="6" data-testid="step-6"><span class="step-number">06</span><span>Sunum föyü<small>Bir arada, özenle</small></span></button>
-        <button type="button" class="step-button" data-step="7" data-testid="step-7"><span class="step-number">07</span><span>Yazdır & PDF<small>Paylaşmaya hazır</small></span></button>
+        <button type="button" class="step-button active" data-step="1" data-testid="step-1" aria-current="step"><span class="step-number">1</span><span>Desen<small>Seç, yükle ya da çiz</small></span></button>
+        <button type="button" class="step-button" data-step="2" data-testid="step-2"><span class="step-number">2</span><span>Renkler<small>Motif, zemin ve biye</small></span></button>
+        <button type="button" class="step-button" data-step="3" data-testid="step-3"><span class="step-number">3</span><span>Ürünler<small>Hangi ürün, hangi renkler</small></span></button>
+        <button type="button" class="step-button" data-step="4" data-testid="step-4"><span class="step-number">4</span><span>Föy & yazdır<small>Müşteriye A5 / A6 örnek</small></span></button>
       </nav>
       <div class="sidebar-bottom"><span class="local-icon">⌁</span><strong>İlham sizden.<br>Düzen stüdyodan.</strong><p>Dosyalarınız bu cihazda kalır.<br>Dış servis, üyelik veya AI üretimi yok.</p><span class="version">KUMASHAI / STÜDYO 1.0</span></div>
     </aside>
@@ -39,14 +36,14 @@
       </header>
       <main>
         <section class="project-heading">
-          <div><div class="eyebrow">KÜÇÜK DESENLER, GÜZEL KOLEKSİYONLAR</div><h1>Bir fikri kumaşa dönüştürün<span>.</span></h1><p>Renkten ürüne, tek bir yaratıcı çalışma alanı.</p></div>
+          <div><h1>Desenden föye, dört adımda<span>.</span></h1><p>Desen → Renkler → Ürünler → Föy & yazdır. Çalışmanız kendiliğinden bu bilgisayara kaydedilir.</p></div>
           <div class="project-fields">
             <label>PROJE ADI<input id="project-name" data-testid="project-name" maxlength="80" required></label>
             <label>DESEN KODU<input id="design-code" data-testid="design-code" maxlength="40" required></label>
           </div>
         </section>
         <div class="workspace-toolbar">
-          <div><span class="live-dot"></span><strong id="current-step-title">Renk paleti</strong><span class="toolbar-divider">/</span><span id="step-counter">Adım 1 / 7</span></div>
+          <div><span class="live-dot"></span><strong id="current-step-title">Desen</strong><span class="toolbar-divider">/</span><span id="step-counter">Adım 1 / 4</span></div>
           <span id="save-state">Yerel taslak hazırlanıyor…</span>
         </div>
         <div class="workbench" id="workbench">
@@ -56,96 +53,86 @@
               <div class="preview-corner">KUMASH / ATELIER<br><span id="preview-code">KMS-026</span></div>
               <div id="main-preview"></div>
               <div class="preview-stamp"><span>ÖZGÜN<br>DESEN</span><span class="stamp-star">✳</span></div>
-              <div class="preview-caption"><span id="preview-product-label">Atlet · ön görünüm</span><span>Vektör ürün önizlemesi</span></div>
+              <div class="preview-caption"><span id="preview-product-label">Atlet · ön görünüm</span><span>Önizleme</span></div>
             </div>
-            <div class="fabric-bar"><div id="mini-swatch" class="mini-swatch"></div><div><strong id="repeat-label">20 × 20 cm tekrar</strong><span>Aynı kompozisyon, tüm renklerde.</span></div><button type="button" class="text-button" id="edit-repeat">Ölçüyü düzenle ↗</button></div>
+            <div class="fabric-bar"><div id="mini-swatch" class="mini-swatch"></div><div><strong id="repeat-label">20 × 20 cm tekrar</strong><span>Bütün ürünlerde aynı desen.</span></div><button type="button" class="text-button" id="edit-repeat">Ölçüyü düzenle ↗</button></div>
             <div class="preview-footer"><span><i class="color-dot" id="background-dot"></i> <span id="background-label">Vanilya zemin</span></span><span id="composition-badge">Kompozisyon #24026</span></div>
           </section>
 
           <aside class="controls-panel" aria-label="Tasarım kontrolleri">
             <section class="step-panel" data-panel="1">
-              <div class="control-title"><span class="section-number">01</span><div><h2>Renk paleti</h2><p>Koleksiyonunuzun tonunu belirleyin.</p></div></div>
-              <div class="preset-label">BAŞLANGIÇ PALETİ <span>Doğadan ilhamla</span></div>
-              <div id="palette-controls"></div>
-              <button class="button full dashed" id="add-color" type="button">+ Palete renk ekle</button>
-              <div class="notice"><span>ⓘ</span><p>Renk kodları size aittir. Örnekler resmî TPX / Pantone eşleşmesi değildir; ekran rengi baskı garantisi vermez.</p></div>
-              <div class="inspiration-note"><span>✳</span><div><strong>Biraz doğa, biraz oyun.</strong><p>Adaçayı, sıcak kiremit ve vanilya.<br>Minik hikâyeler için yumuşak bir başlangıç.</p></div></div>
+              <div class="control-title"><span class="section-number">1</span><div><h2>Desen</h2><p>Hazır motif seçin, kendi deseninizi yükleyin ya da çizin.</p></div></div>
+              <h3 class="small-heading">HAZIR MOTİFLER <span class="hint">— istediklerinize dokunun</span></h3>
+              <div class="motif-grid" id="motif-controls"></div>
+              <div class="upload-box"><strong>Kendi deseniniz var mı?</strong><p>Satın aldığınız stok desen ya da kendi çiziminiz · PNG / JPEG · en fazla 10 MB</p><label class="button secondary" for="image-upload">↥ &nbsp; Desen yükle</label><input id="image-upload" data-testid="image-upload" type="file" accept="image/png,image/jpeg" class="visually-hidden"></div>
+              <div id="asset-list"></div>
+              <div class="field" id="pattern-mode-field" hidden><label for="pattern-mode">Kumaşta ne kullanılsın?</label><select id="pattern-mode"><option value="motifs">Seçili motifler</option><option value="raster">Yüklediğim desen (bütün olarak)</option></select></div>
+              <div class="atolye-box"><strong>Sıfırdan çizmek ister misiniz?</strong><p>Motif ve fırçayla kendi tekrar eden deseninizi çizin.</p><button class="button secondary full" id="open-atolye" data-testid="open-atolye" type="button">✎ &nbsp; Çizim atölyesini aç</button></div>
+              <div class="divider"></div><h3 class="small-heading">YERLEŞİM</h3>
+              <button class="button primary full" id="mix-button" data-testid="mix-button" type="button">⤨ &nbsp; Motifleri yeniden diz</button>
+              <p class="small muted" id="mix-hint"></p>
+              <div class="slider-field"><label for="scale">Desen büyüklüğü <output id="scale-output"></output></label><input id="scale" type="range" min=".35" max="2" step=".05"></div>
+              <div class="slider-field"><label for="density">Motif sayısı <output id="density-output"></output></label><input id="density" type="range" min="4" max="40" step="1"></div>
+              <details class="optional-panel" id="fine-tune"><summary>İnce ayar <span>dönüş, tekrar ölçüsü</span></summary>
+                <div class="slider-field"><label for="rotation">Dönüş <output id="rotation-output"></output></label><input id="rotation" type="range" min="-180" max="180" step="1"></div>
+                <h3 class="small-heading">TEKRAR ÖLÇÜSÜ (5–50 cm)</h3>
+                <div class="two-fields"><label>En (cm)<input id="repeat-width" type="number" min="5" max="50" step=".1"></label><label>Boy (cm)<input id="repeat-height" type="number" min="5" max="50" step=".1"></label></div>
+                <p class="small muted">Yerleşim no: <span id="seed-display" data-testid="seed-display">24026</span></p>
+              </details>
             </section>
             <section class="step-panel" data-panel="2" hidden>
-              <div class="control-title"><span class="section-number">02</span><div><h2>Desen & motif</h2><p>Özgün çizimlerden kendi dilinizi kurun.</p></div></div>
-              <div class="field"><label for="pattern-mode">Desen kullanımı</label><select id="pattern-mode"><option value="motifs">Katmanlı motif kompozisyonu</option><option value="raster">Yüklenen deseni bütün olarak tekrarla</option></select></div>
-              <div class="motif-grid" id="motif-controls"></div>
-              <div class="upload-box"><span class="upload-icon">↥</span><strong>Kendi deseninizi ekleyin</strong><p>PNG / JPEG · en fazla 10 MB ve 16 MP</p><label class="button secondary" for="image-upload">Görsel seç</label><input id="image-upload" data-testid="image-upload" type="file" accept="image/png,image/jpeg" class="visually-hidden"></div>
-              <div class="atolye-box"><strong>Kendi raportunuzu çizin</strong><p>Motif, fırça ve simetriyle kesintisiz tekrar eden desen; düz, yarım kaydırma, tuğla veya ayna dizilimi.</p><button class="button secondary full" id="open-atolye" data-testid="open-atolye" type="button">✎ &nbsp; Çizim atölyesini aç</button></div>
-              <div id="asset-list"></div>
-              <div class="notice"><span>ⓘ</span><p>Kullanım hakkını edindiğiniz (ör. lisanslı stok) desenleri yükleyin. “Renkleri değiştir” ile desenin renklerini tek tek değiştirebilir, zeminini şeffaf yapıp proje zeminini kullanabilirsiniz. Nesneler ayrı ayrı ayrıştırılmaz; tekrar oranı görseli esnetebilir.</p></div>
-              <p class="small muted">Hazır çizimler bu stüdyo için özgün olarak üretilmiştir.</p>
+              <div class="control-title"><span class="section-number">2</span><div><h2>Renkler</h2><p>Renk kutusuna dokunup yeni rengi seçin.</p></div></div>
+              <h3 class="small-heading">ZEMİN RENGİ</h3>
+              <div class="ground-quick" id="ground-quick"></div>
+              <div class="color-row"><input id="background-color" data-testid="background-color" type="color" aria-label="Zemin rengi"><input id="background-hex" maxlength="7" spellcheck="false" aria-label="Zemin renk kodu"></div>
+              <h3 class="small-heading">BİYE RENGİ <span class="hint">— yaka, kol ve kenarlar</span></h3>
+              <div class="color-row"><input id="trim-color" data-testid="trim-color" type="color" aria-label="Biye rengi"><input id="trim-hex" maxlength="7" spellcheck="false" aria-label="Biye renk kodu"></div>
+              <div class="divider"></div><h3 class="small-heading">MOTİF RENKLERİ <span class="hint">— ad ve kendi renk kodunuz föye yazılır</span></h3>
+              <div id="palette-controls"></div>
+              <button class="button full dashed" id="add-color" type="button">+ Renk ekle</button>
+              <p class="small muted">Hazır motifler bu renklerle boyanır. Yüklediğiniz desenin renklerini Desen adımındaki “Renkleri değiştir” ile değiştirin. Ekran rengi baskı rengini garanti etmez.</p>
             </section>
             <section class="step-panel" data-panel="3" hidden>
-              <div class="control-title"><span class="section-number">03</span><div><h2>Karıştır</h2><p>Aynı desenin yeni bir ritmini keşfedin.</p></div></div>
-              <div class="seed-card"><span>KOMPOZİSYON TOHUMU</span><strong id="seed-display" data-testid="seed-display">24026</strong><small>Yalnız siz değiştirince değişir.</small></div>
-              <div class="slider-field"><label for="scale">Motif / desen ölçeği <output id="scale-output"></output></label><input id="scale" type="range" min=".35" max="2" step=".05"></div>
-              <div class="slider-field"><label for="rotation">Dönüş <output id="rotation-output"></output></label><input id="rotation" type="range" min="-180" max="180" step="1"></div>
-              <div class="slider-field"><label for="density">Motif sıklığı <output id="density-output"></output></label><input id="density" type="range" min="4" max="40" step="1"></div>
-              <button class="button primary full" id="mix-button" data-testid="mix-button" type="button">⤨ &nbsp; Yeni kompozisyon karıştır</button>
-              <p class="small muted" id="mix-hint">Karıştırma tüm varyantları ve föydeki kaynak deseni birlikte günceller. Zemin ve biye değişikliği yerleşimi etkilemez.</p>
-              <div class="divider"></div><h3 class="small-heading">TEKRAR ÖLÇÜSÜ</h3>
-              <div class="two-fields"><label>En (cm)<input id="repeat-width" type="number" min="5" max="50" step=".1"></label><label>Boy (cm)<input id="repeat-height" type="number" min="5" max="50" step=".1"></label></div>
-              <p class="small muted">5–50 cm. Föydeki desen küçültülmüş bir önizlemedir, gerçek boy baskı değildir.</p>
+              <div class="control-title"><span class="section-number">3</span><div><h2>Ürünler</h2><p>Grubu ve ürünü seçin, zemin renklerini işaretleyin, oluşturun.</p></div></div>
+              <h3 class="small-heading">KİMİN İÇİN?</h3>
+              <div class="at-seg audience" id="audience" data-testid="audience"><button type="button" data-audience="kadin" aria-pressed="false">Kadın</button><button type="button" data-audience="erkek" aria-pressed="false">Erkek</button><button type="button" data-audience="cocuk" aria-pressed="true">Çocuk</button></div>
+              <div class="field"><label for="product-type">Ürün</label><select id="product-type"><option value="tank">Atlet</option><option value="cami">Askılı atlet</option><option value="brief-front">Külot · ön görünüm</option><option value="brief-back">Külot · arka görünüm</option><option value="boxer">Boxer</option></select></div>
+              <div class="field"><label for="pack-type">Tek mi, takım mı, paket mi?</label><select id="pack-type"><option value="single">Tek ürün</option><option value="set">Takım (üst + alt)</option><option value="3">Üçlü paket</option><option value="5">Beşli paket</option></select></div>
+              <h3 class="small-heading">HANGİ ZEMİN RENKLERİNDE?</h3>
+              <div id="background-options" class="background-options"></div>
+              <button class="text-button" id="add-background" type="button">+ Şu anki zemin rengini listeye ekle</button>
+              <button class="button primary full" id="generate-variants" data-testid="generate-variants" type="button">İşaretli renklerle ürünleri oluştur</button>
+              <div class="divider"></div><h3 class="small-heading">TEK ÜRÜN EKLE <span class="hint">— şu anki zemin ve biye ile</span></h3>
+              <div class="field"><label for="variant-label">Ad</label><input id="variant-label" maxlength="48" value="Yeni renk"></div>
+              <button class="button secondary full" id="add-variant" data-testid="add-variant" type="button">+ Ekle</button>
+              <div class="selected-variant-box" id="selected-variant-box" hidden><strong id="selected-variant-label"></strong><p class="small">Ürünü, zemini veya biyeyi değiştirip kaydedin.</p><button class="button secondary full" id="update-variant" type="button">Değişikliği bu ürüne kaydet</button><button class="text-button danger" id="clear-selection" type="button">Vazgeç</button></div>
+              <p class="small muted">Aşağıdaki listeden bir ürüne dokunursanız düzenleyebilir, × ile silebilirsiniz. En fazla 60 ürün.</p>
             </section>
             <section class="step-panel" data-panel="4" hidden>
-              <div class="control-title"><span class="section-number">04</span><div><h2>Zemin & biye</h2><p>Motiflere dokunmadan renk deneyin.</p></div></div>
-              <div class="color-setting"><label for="background-color">Zemin rengi<small>Desenin altındaki renk</small></label><input id="background-color" data-testid="background-color" type="color"></div>
-              <div class="field"><label for="background-hex">Zemin HEX</label><input id="background-hex" maxlength="7" spellcheck="false"></div>
-              <div class="color-setting"><label for="trim-color">Biye rengi<small>Yaka, kol ve kenar detayları</small></label><input id="trim-color" data-testid="trim-color" type="color"></div>
-              <div class="field"><label for="trim-hex">Biye HEX</label><input id="trim-hex" maxlength="7" spellcheck="false"></div>
-              <div class="divider"></div><h3 class="small-heading">TOPLU VARYANT ZEMİNLERİ</h3>
-              <div id="background-options" class="background-options"></div>
-              <button class="button secondary full" id="add-background" type="button">+ Geçerli zemini listeye ekle</button>
-              <p class="small muted">Seçili zeminler, aynı kompozisyon ve seçili biye ile üretilir. Değişiklikler mevcut varyantlara otomatik yazılmaz; varyantı güncelleyin veya yeni ekleyin.</p>
-            </section>
-            <section class="step-panel" data-panel="5" hidden>
-              <div class="control-title"><span class="section-number">05</span><div><h2>Varyantlar</h2><p>Tek bir desenden bir koleksiyon.</p></div></div>
-              <div class="field"><label for="product-type">Ürün kalıbı</label><select id="product-type"><option value="tank">Atlet</option><option value="brief-front">Külot · ön görünüm</option><option value="brief-back">Külot · arka görünüm</option><option value="boxer">Boxer</option></select></div>
-              <div class="field"><label for="pack-type">Ürün / takım / paket</label><select id="pack-type"><option value="single">Tek ürün</option><option value="set">Atlet + alt takım</option><option value="3">Üçlü paket</option><option value="5">Beşli paket</option></select></div>
-              <div class="field"><label for="variant-label">Varyant adı</label><input id="variant-label" maxlength="48" value="Yeni renk"></div>
-              <button class="button primary full" id="add-variant" data-testid="add-variant" type="button">+ Varyant olarak ekle</button>
-              <button class="button secondary full" id="generate-variants" data-testid="generate-variants" type="button">Seçili zeminlerin tümünü üret</button>
-              <div class="selected-variant-box" id="selected-variant-box" hidden><strong id="selected-variant-label"></strong><p class="small">Geçerli zemin, biye, ürün ve paket seçimi bu varyanta yazılır.</p><button class="button secondary full" id="update-variant" type="button">Seçili varyantı güncelle</button><button class="text-button danger" id="clear-selection" type="button">Seçimi bırak</button></div>
-              <p class="small muted">Yeni varyant eklemek açık bir işlemdir. Global motif, palet ve karıştırma değişiklikleri bütün varyantlarda ortak kalır. En fazla 60 varyant.</p>
-              <details class="optional-panel"><summary>Manken üzerinde sunum <span>Opsiyonel</span></summary><p>API bağlantısı henüz kurulmadı. Canlı manken üretimi bu sürümde yoktur. Dosya gönderilmez, anahtar istenmez. Vektör ürün föyleri bağımsız çalışır.</p></details>
-            </section>
-            <section class="step-panel" data-panel="6" hidden>
-              <div class="control-title"><span class="section-number">06</span><div><h2>Sunum föyü</h2><p>Desen, renk ve ürün aynı sayfada.</p></div></div>
+              <div class="control-title"><span class="section-number">4</span><div><h2>Föy & yazdır</h2><p>Müşteriye gösterilecek sayfayı hazırlayın.</p></div></div>
               <div class="field"><label for="company-name">Firma / atölye adı</label><input id="company-name" maxlength="80"></div>
               <div class="field"><label for="size-info">Beden</label><input id="size-info" data-testid="size-info" maxlength="40" placeholder="ör. 36 ay"></div>
               <div class="field"><label for="fabric-info">Kumaş</label><input id="fabric-info" data-testid="fabric-info" maxlength="80" placeholder="ör. Full likralı süprem"></div>
-              <div class="notice"><span>↙</span><p>Föyün solunda kaynak desen, beden/kumaş bilgisi ve renk kartelası; sağında numaralı varyantlar yer alır. Her sayfanın paleti o sayfanın gerçek zemin ve biyelerini içerir.</p></div>
-              <div class="summary-card" id="presentation-summary"></div>
-              <button class="button secondary full" id="go-print" type="button">Baskı ayarlarına geç →</button>
-            </section>
-            <section class="step-panel" data-panel="7" hidden>
-              <div class="control-title"><span class="section-number">07</span><div><h2>Yazdır & PDF</h2><p>Föyünüz paylaşmaya hazır.</p></div></div>
-              <div class="two-fields"><label>Kâğıt<select id="paper-size" data-testid="paper-size"><option value="A5">A5 · 148 × 210 mm</option><option value="A6">A6 · 105 × 148 mm</option></select></label><label>Yön<select id="paper-orientation"><option value="landscape">Yatay</option><option value="portrait">Dikey</option></select></label></div>
+              <div class="two-fields"><label>Kâğıt<select id="paper-size" data-testid="paper-size"><option value="A5">A5</option><option value="A6">A6</option></select></label><label>Yön<select id="paper-orientation"><option value="landscape">Yatay</option><option value="portrait">Dikey</option></select></label></div>
               <div class="print-summary" id="print-summary"></div>
-              <button class="button primary full" id="print-button" data-testid="print-button" type="button">Föyü yazdır / PDF kaydet ↗</button>
-              <div class="notice"><span>ⓘ</span><p>Tarayıcının yazdır penceresi açılır. PDF için <strong>“PDF olarak kaydet”</strong> seçin. Ölçek %100; üst/alt bilgileri kapalı tutun. Arka plan grafikleri açık olmalıdır.</p></div>
-              <p class="small muted">A5: en fazla 6, A6: en fazla 3 varyant/sayfa. Baskıya yalnız föyler gider. Renk doğruluğu için fiziksel numune alın.</p>
+              <div id="presentation-summary" hidden></div>
+              <button class="button primary full" id="print-button" data-testid="print-button" type="button">Yazdır / PDF kaydet</button>
+              <p class="small muted">Açılan pencerede ölçeği %100 yapın, “arka plan grafikleri”ni açın, üst/alt bilgiyi kapatın. PDF için hedef olarak “PDF olarak kaydet”i seçin. Renk onayı için gerçek numune alın.</p>
             </section>
-            <div class="step-footer"><button class="text-button" id="previous-step" type="button">← Geri</button><button class="button primary" id="next-step" type="button">Desen & motif →</button></div>
+            <div class="step-footer"><button class="text-button" id="previous-step" type="button">← Geri</button><button class="button primary" id="next-step" type="button">Renkler →</button></div>
           </aside>
         </div>
         <section class="collection-panel" id="collection-panel">
-          <div class="collection-heading"><div><span class="eyebrow">KOLEKSİYONUNUZ</span><h2>Bir desen. Birçok olasılık. <span id="variant-count">3 varyant</span></h2></div><button class="text-button" id="manage-variants" type="button">Varyantları düzenle ↗</button></div>
+          <div class="collection-heading"><div><span class="eyebrow">KOLEKSİYONUNUZ</span><h2>Bir desen. Birçok olasılık. <span id="variant-count">3 ürün</span></h2></div><button class="text-button" id="manage-variants" type="button">Ürünleri düzenle ↗</button></div>
           <div class="variant-grid" id="variant-list"></div>
           <button class="button secondary" id="show-all-variants" type="button" hidden>Tüm varyantları göster</button>
         </section>
-        <section class="presentation-area" id="presentation-area" hidden><div class="collection-heading"><div><span class="eyebrow">SUNUM ÖNİZLEMESİ</span><h2>Müşterinize hazır bir hikâye.</h2></div><span class="small muted">Ekranda ölçekli gösterim</span></div><div id="print-empty" class="empty-state" hidden>Henüz varyant yok. Föy hazırlamak için bir varyant ekleyin.</div><div id="print-sheets"></div></section>
+        <section class="presentation-area" id="presentation-area" hidden><div class="collection-heading"><div><span class="eyebrow">SUNUM ÖNİZLEMESİ</span><h2>Müşterinize hazır bir hikâye.</h2></div><span class="small muted">Ekranda ölçekli gösterim</span></div><div id="print-empty" class="empty-state" hidden>Henüz ürün yok. Föy için 3. adımda ürün ekleyin.</div><div id="print-sheets"></div></section>
       </main>
       <footer class="app-footer"><span>Özenle tasarlandı. Sizin için, sizin cihazınızda.</span><span>KumashAi / Tekstilci Stüdyosu</span></footer>
     </div>
   </div>
-  <div class="status-bar" id="status" data-testid="status" role="status" aria-live="polite">Stüdyoya hoş geldiniz. Özgün demo koleksiyon düzenlemeye hazır.</div>
+  <div class="status-bar" id="status" data-testid="status" role="status" aria-live="polite">Hoş geldiniz. Örnek koleksiyon açık; soldaki 1. adımdan başlayın.</div>
   <dialog id="projects-dialog">
     <div class="dialog-heading"><div><span class="eyebrow">YEREL ARŞİV</span><h2>Projeyi aç</h2></div><button id="close-projects" class="icon-button" aria-label="Kapat" type="button">×</button></div>
     <p class="small muted">Kayıtlar bu tarayıcıda tutulur. Başka cihaza taşımak için JSON yedeği kullanın.</p>
@@ -255,6 +242,23 @@
         <div id="rc-rows" data-testid="rc-rows"></div>
         <p class="small muted">Soldaki özgün renk, sağdaki yeni renkle değişir. “Zemin yap” o rengi şeffaflaştırır; arkasında projenin zemin rengi görünür ve her varyantta ayrı değiştirilebilir. Düz renkli baskılarda en iyi sonucu verir.</p>
         <div class="at-row"><button class="button subtle" id="rc-reset" type="button">Sıfırla</button><button class="button primary" id="rc-apply" data-testid="rc-apply" type="button">Yeni renklerle kullan</button></div>
+      </div>
+    </div>
+  </dialog>
+  <dialog id="figure-dialog" data-testid="figure-dialog" aria-labelledby="figure-title">
+    <div class="dialog-heading">
+      <div><span class="eyebrow">FİGÜR SEÇ</span><h2 id="figure-title">Desenden bir figür alın</h2></div>
+      <button id="fg-close" class="icon-button" aria-label="Kapat" type="button">×</button>
+    </div>
+    <p class="small at-status" id="fg-status" data-testid="fg-status" role="status" aria-live="polite"></p>
+    <div class="rc-grid">
+      <div class="rc-stage fg-stage"><canvas id="fg-canvas" data-testid="fg-canvas" aria-label="Figürü seçmek için kutu çizin"></canvas></div>
+      <div class="rc-side">
+        <strong id="fg-name"></strong>
+        <div class="fg-result-wrap" id="fg-result-wrap"><canvas id="fg-result" data-testid="fg-result" aria-label="Kesilen figür" hidden></canvas></div>
+        <div class="at-row"><label for="fg-tolerance">Zemin silme</label><input type="range" id="fg-tolerance" min="8" max="140" value="48"><span class="at-val" id="fg-tolerance-val">48</span></div>
+        <p class="small muted">Kutunun kenarındaki renk zemin sayılır ve içeri doğru silinir. Yalnız kullanım hakkı sizde olan görsellerde kullanın; lisanslı karakterler (çizgi film kahramanları, markalar) izinsiz basılamaz.</p>
+        <button class="button primary full" id="fg-apply" data-testid="fg-apply" type="button" disabled>Motif olarak ekle</button>
       </div>
     </div>
   </dialog>

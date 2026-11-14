@@ -1,14 +1,16 @@
 import {
-  LIMITS, MOTIFS, PAPER, COLOR, clone, defaultProject, validateProject, parseProject,
+  LIMITS, MOTIFS, PAPER, COLOR, GROUND_NAMES, AUDIENCES, clone, defaultProject, validateProject, parseProject,
   serializeProject, inspectImageData, imageHeaderDimensions, validateDimensions,
   variantFromDraft, batchVariants, paginateVariants, paperDimensions,
 } from './design.js';
 import { initAtolye } from './atolye.js';
 import { initRecolor } from './recolor.js';
+import { initFigure } from './figur.js';
 import { escapeHTML as e, motifIcon, garmentSVG, swatchSVG, printSheetsHTML, productLabel, setAssetRenderSources } from './render.js';
 
 const $ = id => document.getElementById(id);
-const names = ['Renk paleti', 'Desen & motif', 'Karıştır', 'Zemin & biye', 'Varyantlar', 'Sunum föyü', 'Yazdır & PDF'];
+const names = ['Desen', 'Renkler', 'Ürünler', 'Föy & yazdır'];
+const LAST_STEP = names.length;
 let project = defaultProject();
 let step = 1;
 let selectedVariant = null;
@@ -52,7 +54,7 @@ function changed(message) {
   if (!frame) frame = requestAnimationFrame(() => { frame = null; render(); });
 }
 function setStep(next) {
-  step = Math.max(1, Math.min(7, next));
+  step = Math.max(1, Math.min(LAST_STEP, next));
   document.querySelectorAll('[data-step]').forEach(button => {
     const active = Number(button.dataset.step) === step;
     button.classList.toggle('active', active);
@@ -61,12 +63,12 @@ function setStep(next) {
   });
   document.querySelectorAll('[data-panel]').forEach(panel => { panel.hidden = Number(panel.dataset.panel) !== step; });
   $('current-step-title').textContent = names[step - 1];
-  $('step-counter').textContent = `Adım ${step} / 7`;
+  $('step-counter').textContent = `Adım ${step} / ${LAST_STEP}`;
   $('previous-step').disabled = step === 1;
-  $('next-step').hidden = step === 7;
+  $('next-step').hidden = step === LAST_STEP;
   $('next-step').textContent = `${names[step] || ''} →`;
-  $('presentation-area').hidden = step < 6;
-  $('collection-panel').hidden = step >= 6;
+  $('presentation-area').hidden = step < LAST_STEP;
+  $('collection-panel').hidden = step >= LAST_STEP;
   render();
 }
 function renderControls() {
@@ -79,6 +81,9 @@ function renderControls() {
   setValue('background-hex', project.background);
   setValue('trim-color', project.trim);
   setValue('trim-hex', project.trim);
+  const allowed = AUDIENCES[project.audience].products;
+  for (const option of $('product-type').options) option.hidden = option.disabled = !allowed.includes(option.value);
+  $('audience').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.audience === project.audience)));
   setValue('product-type', project.product);
   setValue('pack-type', project.pack);
   setValue('pattern-mode', project.composition.mode);
@@ -92,12 +97,14 @@ function renderControls() {
   $('density-output').textContent = `${project.composition.density} motif`;
   $('seed-display').textContent = project.composition.seed;
   $('density').disabled = project.composition.mode === 'raster';
+  $('pattern-mode-field').hidden = project.assets.length === 0;
+  $('ground-quick').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.ground === project.background.toUpperCase())));
   $('mix-button').disabled = project.composition.mode !== 'motifs' || project.composition.motifs.length === 0;
   $('mix-hint').textContent = project.composition.mode === 'raster'
-    ? 'Bütün desen modu, görseli değiştirmeden tekrarlar. Karıştırma ve motif sıklığı bu modda kullanılmaz; ölçek ve dönüş kullanılabilir.'
+    ? 'Yüklediğiniz desen olduğu gibi tekrarlanır; yeniden dizme ve motif sayısı kullanılmaz. Büyüklüğü değiştirebilirsiniz.'
     : project.composition.motifs.length === 0
-      ? 'Karıştırmak için Desen & motif adımında en az bir motif seçin. Şimdilik yalnız düz zemin gösterilir.'
-      : 'Karıştırma tüm varyantları ve föydeki kaynak deseni birlikte günceller. Zemin ve biye değişikliği yerleşimi etkilemez.';
+      ? 'Önce yukarıdan en az bir motif seçin.'
+      : 'Beğenene kadar basın; bütün ürünlerde aynı yerleşim kullanılır.';
   $('selected-variant-box').hidden = !selectedVariant;
   const selected = project.variants.find(v => v.id === selectedVariant);
   $('selected-variant-label').textContent = selected ? `Seçili: ${selected.label}` : '';
@@ -127,22 +134,22 @@ function renderAssets() {
     <img src="${e(asset.dataUrl)}" alt="" width="37" height="37">
     <div><strong>${e(asset.name)}</strong><small>${asset.width} × ${asset.height} px</small><div class="asset-actions">
       ${asset.mime === 'image/png' ? `<button class="text-button" type="button" data-asset-motif="${e(asset.id)}" aria-pressed="${project.composition.motifs.includes(`asset:${asset.id}`)}">${project.composition.motifs.includes(`asset:${asset.id}`) ? '✓ Motif seçili' : 'Motif olarak seç'}</button>` : ''}
+      <button class="text-button" type="button" data-asset-figure="${e(asset.id)}">Figür seç</button>
       <button class="text-button" type="button" data-asset-recolor="${e(asset.id)}">Renkleri değiştir</button>
       <button class="text-button" type="button" data-asset-tile="${e(asset.id)}">${project.composition.mode === 'raster' && project.composition.rasterAssetId === asset.id ? '✓ Bütün desen' : 'Bütün desen yap'}</button>
     </div></div><button class="icon-button" type="button" data-delete-asset="${e(asset.id)}" aria-label="${e(asset.name)} görselini sil">×</button>
   </div>`).join('');
 }
-// Hazır zemin önerileri; ekran rengi baskı/boya garantisi değildir.
-const GROUND_NAMES = {
-  '#F9C9D4': 'Şeker pembesi', '#BFE8D4': 'Mint yeşili', '#F1E9D8': 'Ekru',
-  '#F4EEE2': 'Vanilya', '#E3EBE2': 'Adaçayı', '#F2DBD1': 'Pudra', '#DEE6EB': 'Buz mavisi', '#F3E5BA': 'Saman',
-};
+function renderGroundQuick() {
+  $('ground-quick').innerHTML = Object.entries(GROUND_NAMES).map(([color, name]) =>
+    `<button type="button" data-ground="${color}" aria-pressed="false" title="${color}"><i style="background:${color}"></i>${e(name)}</button>`).join('');
+}
 function renderBackgrounds() {
   const selected = project.selectedBackgrounds.map(color => color.toUpperCase());
   const options = [...new Set([...Object.keys(GROUND_NAMES), ...selected])];
   $('background-options').innerHTML = options.map(color => `<label class="background-option">
     <input type="checkbox" value="${color}" data-background-option ${selected.includes(color) ? 'checked' : ''} aria-label="${color} zeminini toplu üretime ekle">
-    <i style="background:${color}"></i>${GROUND_NAMES[color] ? `${GROUND_NAMES[color]} · ` : ''}${color}</label>`).join('');
+    <i style="background:${color}"></i>${GROUND_NAMES[color] || color}</label>`).join('');
 }
 function renderPreview() {
   const draft = variantFromDraft(project, 'preview');
@@ -154,16 +161,16 @@ function renderPreview() {
   $('background-dot').style.backgroundColor = project.background;
   $('background-label').textContent = `${project.background} zemin`;
   $('repeat-label').textContent = `${project.composition.repeatWidthCm} × ${project.composition.repeatHeightCm} cm tekrar`;
-  $('composition-badge').textContent = `Kompozisyon #${project.composition.seed}`;
+  $('composition-badge').textContent = `Yerleşim no ${project.composition.seed}`;
   for (const mode of ['product', 'fabric']) {
     $(`view-${mode}`).classList.toggle('active', mode === previewMode);
     $(`view-${mode}`).setAttribute('aria-pressed', String(mode === previewMode));
   }
 }
 function renderVariants() {
-  $('variant-count').textContent = `${project.variants.length} varyant`;
-  if (step >= 6) return;
-  const all = showAll || step === 5;
+  $('variant-count').textContent = `${project.variants.length} ürün`;
+  if (step >= LAST_STEP) return;
+  const all = showAll || step === 3;
   const variants = all ? project.variants : project.variants.slice(0, 6);
   $('show-all-variants').hidden = all || project.variants.length <= 6;
   $('show-all-variants').textContent = `Tüm ${project.variants.length} varyantı göster`;
@@ -183,10 +190,10 @@ function renderPrint(force = false) {
   $('page-style').textContent = `@page { size: ${width}mm ${height}mm; margin: 0; }`;
   document.body.classList.toggle('no-print-variants', project.variants.length === 0);
   $('presentation-summary').textContent = `${project.variants.length} varyant · ${pages.length} sayfa · Ortak kompozisyon #${project.composition.seed}. Kaynak desen, kullanıcı kodları, gerçek zeminler ve biyeler föyde birlikte yer alır.`;
-  $('print-summary').textContent = `${paper} · ${width} × ${height} mm · ${orientation === 'landscape' ? 'Yatay' : 'Dikey'}\n${pages.length} sayfa / ${project.variants.length} varyant · sayfa başına en fazla ${PAPER[paper].capacity}`;
+  $('print-summary').textContent = `${project.variants.length} ürün · ${pages.length} sayfa\n${paper} ${orientation === 'landscape' ? 'yatay' : 'dikey'} (${width} × ${height} mm) · sayfada en fazla ${PAPER[paper].capacity} ürün`;
   $('print-empty').hidden = project.variants.length > 0;
   // No hidden, potentially very large print DOM during normal editing.
-  if (!force && step < 6) {
+  if (!force && step < LAST_STEP) {
     if ($('print-sheets').childElementCount) $('print-sheets').replaceChildren();
     printRevision = -1;
     return;
@@ -198,7 +205,7 @@ function renderPrint(force = false) {
 }
 function render() { renderControls(); renderPreview(); renderVariants(); renderPrint(); }
 function renderAll() {
-  renderPalette(); renderMotifs(); renderAssets(); renderBackgrounds(); render();
+  renderPalette(); renderMotifs(); renderAssets(); renderGroundQuick(); renderBackgrounds(); render();
 }
 
 function openDatabase() {
@@ -390,6 +397,15 @@ function fileDataUrl(file) {
     reader.readAsDataURL(file);
   });
 }
+function hasTransparency(image) {
+  const size = 64, canvas = document.createElement('canvas');
+  canvas.width = size; canvas.height = size;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  context.drawImage(image, 0, 0, size, size);
+  const data = context.getImageData(0, 0, size, size).data;
+  for (let i = 3; i < data.length; i += 4) if (data[i] < 250) return true;
+  return false;
+}
 async function uploadImage(file) {
   if (!file) return;
   const generation = operationGeneration;
@@ -408,7 +424,8 @@ async function uploadImage(file) {
     const candidate = clone(project);
     candidate.assets.push(asset);
     candidate.composition.rasterAssetId = asset.id;
-    if (file.type === 'image/png') {
+    // Yalnız şeffaf zeminli PNG tek motif gibi serpilir; opak görsel bütün desen olur.
+    if (file.type === 'image/png' && hasTransparency(image)) {
       candidate.composition.mode = 'motifs';
       candidate.composition.motifs.push(`asset:${asset.id}`);
     } else {
@@ -418,7 +435,7 @@ async function uploadImage(file) {
     syncAssetSources();
     decodedAssets.set(asset.id, image);
     renderAssets(); renderMotifs();
-    changed('Görsel çözümlendi ve projeye eklendi. Opak içeriğin renkleri değişmez; şeffaf PNG motif olarak kullanılabilir.');
+    changed('Desen eklendi. Altındaki düğmelerle içinden figür seçebilir ya da renklerini değiştirebilirsiniz.');
   } catch (error) { status(`Görsel yüklenemedi: ${error.message}`, true); }
   finally { $('image-upload').disabled = false; $('image-upload').value = ''; }
 }
@@ -440,6 +457,23 @@ async function applyAtolye({ dataUrl, width, height, repeatWidthCm, repeatHeight
   decodedAssets.set(ATOLYE_ASSET, image);
   renderAssets(); renderMotifs();
   changed(`Çizdiğiniz raport ortak desen oldu (${repeatWidthCm} × ${repeatHeightCm} cm). Zemin rengi tüm varyantlarda ayrı ayrı değiştirilebilir.`);
+}
+/** Kesilen figürü şeffaf PNG motif olarak ekler; kaynak görsel olduğu gibi kalır. */
+async function applyFigure(sourceId, { dataUrl, width, height }) {
+  const source = project.assets.find(a => a.id === sourceId);
+  if (!source) throw new Error('Kaynak görsel artık projede yok.');
+  if (project.assets.length >= LIMITS.assets) throw new Error('En fazla 8 görsel eklenebilir; önce bir görseli silin.');
+  const asset = { id: newId('img'), name: `${source.name.slice(0, 100)} · figür`, mime: 'image/png', width, height, dataUrl };
+  const image = await verifyAsset(asset);
+  const candidate = clone(project);
+  candidate.assets.push(asset);
+  candidate.composition.mode = 'motifs';
+  candidate.composition.motifs.push(`asset:${asset.id}`);
+  project = validateProject(candidate);
+  syncAssetSources();
+  decodedAssets.set(asset.id, image);
+  renderAssets(); renderMotifs();
+  changed('Figür motif olarak eklendi. Yalnız onu kullanmak için diğer motiflerin işaretini kaldırın; rengi için “Renkleri değiştir”.');
 }
 /** Renk ayırma sonucunu kaynağın yanına ayrı PNG olarak yazar ve kaynağın rolünü ona verir. */
 async function applyRecolor(sourceId, { dataUrl, width, height }) {
@@ -504,9 +538,8 @@ function bindEvents() {
   document.querySelectorAll('[data-step]').forEach(button => button.addEventListener('click', () => setStep(Number(button.dataset.step))));
   $('previous-step').addEventListener('click', () => setStep(step - 1));
   $('next-step').addEventListener('click', () => setStep(step + 1));
-  $('edit-repeat').addEventListener('click', () => setStep(3));
-  $('manage-variants').addEventListener('click', () => setStep(5));
-  $('go-print').addEventListener('click', () => setStep(7));
+  $('edit-repeat').addEventListener('click', () => { setStep(1); $('fine-tune').open = true; $('repeat-width').focus(); });
+  $('manage-variants').addEventListener('click', () => setStep(3));
   for (const [id, field, max] of [['project-name', 'name', 80], ['design-code', 'designCode', 40], ['company-name', 'company', 80]]) {
     $(id).addEventListener('change', event => {
       const value = event.target.value.trim();
@@ -565,11 +598,11 @@ function bindEvents() {
     project.composition.motifs = list.includes(motif) ? list.filter(m => m !== motif) : [...list, motif];
     project.composition.mode = 'motifs';
     renderMotifs(); renderAssets();
-    changed('Ortak motif seçimi tüm varyantlarda güncellendi.');
+    changed('Motif seçimi bütün ürünlerde güncellendi.');
   });
   $('pattern-mode').addEventListener('change', event => {
     if (event.target.value === 'raster' && !project.assets.length) {
-      event.target.value = project.composition.mode; status('Bütün desen modu için önce PNG/JPEG yükleyin.', true); return;
+      event.target.value = project.composition.mode; status('Önce bir desen yükleyin.', true); return;
     }
     project.composition.mode = event.target.value;
     if (project.composition.mode === 'raster' && !project.composition.rasterAssetId) project.composition.rasterAssetId = project.assets[0].id;
@@ -582,14 +615,16 @@ function bindEvents() {
   });
   $('open-atolye').addEventListener('click', () => atolye.open());
   const recolorTool = initRecolor({ getBackground: () => project.background, onApply: applyRecolor });
+  const figureTool = initFigure({ getBackground: () => project.background, onApply: applyFigure });
   $('asset-list').addEventListener('click', async event => {
-    const button = event.target.closest('[data-asset-recolor]');
+    const button = event.target.closest('[data-asset-recolor], [data-asset-figure]');
     if (!button) return;
-    const asset = project.assets.find(a => a.id === button.dataset.assetRecolor);
+    const figure = button.dataset.assetFigure !== undefined;
+    const asset = project.assets.find(a => a.id === (figure ? button.dataset.assetFigure : button.dataset.assetRecolor));
     if (!asset) return;
     try {
       if (!decodedAssets.has(asset.id)) decodedAssets.set(asset.id, await verifyAsset(asset));
-      recolorTool.open(asset, decodedAssets.get(asset.id));
+      (figure ? figureTool : recolorTool).open(asset, decodedAssets.get(asset.id));
     } catch (error) { status(`Görsel açılamadı: ${error.message}`, true); }
   });
   $('asset-list').addEventListener('click', event => {
@@ -637,7 +672,7 @@ function bindEvents() {
   $('mix-button').addEventListener('click', () => {
     if (!project.composition.motifs.length || project.composition.mode !== 'motifs') return;
     project.composition.seed = (project.composition.seed + 1) >>> 0;
-    changed('Yeni ortak kompozisyon oluşturuldu. Tüm varyantlar ve kaynak desen birlikte güncellendi.');
+    changed('Motifler yeniden dizildi; bütün ürünler güncellendi.');
   });
   for (const key of ['background', 'trim']) {
     $(`${key}-color`).addEventListener('input', event => {
@@ -651,6 +686,12 @@ function bindEvents() {
       project[key] = event.target.value.toUpperCase(); changed();
     });
   }
+  $('ground-quick').addEventListener('click', event => {
+    const button = event.target.closest('[data-ground]');
+    if (!button) return;
+    project.background = button.dataset.ground;
+    changed(`Zemin: ${GROUND_NAMES[button.dataset.ground]}.`);
+  });
   $('background-options').addEventListener('change', event => {
     if (!event.target.matches('[data-background-option]')) return;
     const value = event.target.value;
@@ -665,6 +706,14 @@ function bindEvents() {
     if (project.selectedBackgrounds.length >= LIMITS.backgrounds) { status('En fazla 12 toplu zemin seçilebilir.', true); return; }
     project.selectedBackgrounds.push(project.background); renderBackgrounds(); changed('Geçerli zemin toplu üretim listesine eklendi.');
   });
+  $('audience').addEventListener('click', event => {
+    const button = event.target.closest('[data-audience]');
+    if (!button || button.dataset.audience === project.audience) return;
+    project.audience = button.dataset.audience;
+    const { label, products } = AUDIENCES[project.audience];
+    if (!products.includes(project.product)) project.product = products[0];
+    changed(`${label} ürünleri gösteriliyor. Daha önce eklediğiniz ürünler değişmedi.`);
+  });
   for (const [id, key] of [['product-type', 'product'], ['pack-type', 'pack']]) {
     $(id).addEventListener('change', event => { project[key] = event.target.value; changed(); });
   }
@@ -673,14 +722,15 @@ function bindEvents() {
     const label = $('variant-label').value.trim();
     if (!label || label.length > 48 || /[\u0000-\u001F\u007F]/.test(label)) { status('Varyant adı 1–48 karakter olmalı.', true); return; }
     project.variants.push(variantFromDraft(project, newId(), label));
-    changed('Varyant koleksiyona eklendi. Ortak kompozisyon korunuyor.');
+    changed('Ürün eklendi.');
   });
   $('generate-variants').addEventListener('click', () => {
     try {
       if (!project.selectedBackgrounds.length) throw new Error('Önce en az bir toplu zemin seçin.');
       const variants = batchVariants(project, project.selectedBackgrounds.map(() => newId()));
+      for (const v of variants) v.label = GROUND_NAMES[v.background.toUpperCase()] || v.label;
       project.variants.push(...variants);
-      changed(`${variants.length} seçili zemin için aynı biye ve ortak kompozisyonla varyantlar eklendi.`);
+      changed(`${variants.length} ürün eklendi. Aşağıdaki listede görebilir, 4. adımda yazdırabilirsiniz.`);
     } catch (error) { status(error.message, true); }
   });
   $('variant-list').addEventListener('click', event => {
@@ -692,13 +742,13 @@ function bindEvents() {
       selectedVariant = variant.id;
       for (const key of ['background', 'trim', 'product', 'pack']) project[key] = variant[key];
       $('variant-label').value = variant.label;
-      setStep(5);
-      changed('Varyant düzenleme taslağına alındı. Değişiklikleri “Seçili varyantı güncelle” ile uygulayın.');
+      setStep(3);
+      changed('Ürün düzenlemeye açıldı. Değiştirip “Değişikliği bu ürüne kaydet”e basın.');
     } else if (remove) {
-      if (!confirm('Bu varyant koleksiyondan silinsin mi?')) return;
+      if (!confirm('Bu ürün listeden silinsin mi?')) return;
       project.variants = project.variants.filter(v => v.id !== remove.dataset.deleteVariant);
       if (selectedVariant === remove.dataset.deleteVariant) selectedVariant = null;
-      changed('Varyant silindi.');
+      changed('Ürün silindi.');
     }
   });
   $('update-variant').addEventListener('click', () => {
@@ -708,7 +758,7 @@ function bindEvents() {
     if (!label || label.length > 48 || /[\u0000-\u001F\u007F]/.test(label)) { status('Geçerli bir varyant adı girin.', true); return; }
     if (!confirm('Seçili varyantın zemin, biye, ürün ve paket bilgileri güncellensin mi?')) return;
     project.variants[index] = variantFromDraft(project, selectedVariant, label);
-    changed('Seçili varyant güncellendi.');
+    changed('Ürün güncellendi.');
   });
   $('clear-selection').addEventListener('click', () => { selectedVariant = null; render(); });
   $('show-all-variants').addEventListener('click', () => { showAll = true; renderVariants(); });
@@ -736,7 +786,7 @@ function bindEvents() {
   });
   $('print-button').addEventListener('click', () => { void printProject(); });
   window.addEventListener('beforeprint', () => renderPrint(true));
-  window.addEventListener('afterprint', () => { if (step < 6) renderPrint(); });
+  window.addEventListener('afterprint', () => { if (step < LAST_STEP) renderPrint(); });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') { clearTimeout(autoTimer); void autosave(); }
   });

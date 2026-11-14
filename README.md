@@ -10,6 +10,12 @@ Python 3 ve güncel bir masaüstü tarayıcısı gerekir. Uygulama için npm pak
 API anahtarı veya internet bağlantısı gerekmez.
 
 ```bash
+./baslat.sh          # sunucuyu başlatır ve tarayıcıda açar
+```
+
+Elle başlatmak için:
+
+```bash
 python3 app/server.py
 ```
 
@@ -22,18 +28,42 @@ python3 app/server.py --port 8796
 Sunucu yalnız kendi bilgisayarınızda dinler ve yalnız `web/` dosyalarını
 yayınlar. Bu sürüm internete açık, çok kullanıcılı bir servis değildir.
 
+## Windows
+
+İki yol var:
+
+- **Kurulumsuz (önerilen):** `dist/KumashAi.html` dosyasını Windows bilgisayara
+  kopyalayıp çift tıklayın. Chrome veya Edge'de açılır; Python, sunucu ve
+  internet gerekmez. Bütün özellikler aynıdır.
+- **Sunuculu:** proje klasörünü kopyalayın ve `baslat.bat` dosyasını çift
+  tıklayın. Python 3 gerekir; yoksa dosya ne yapılacağını söyler.
+
+Tek dosyayı yeniden üretmek için: `python3 tools/tek_dosya.py`. `web/` altında
+değişiklik yaptıktan sonra bu komutu yeniden çalıştırın.
+
+Kayıtlar açılış yoluna bağlıdır: tek dosyayla yapılan çalışma sunuculu sürümde,
+bir bilgisayardaki çalışma diğerinde görünmez. Taşımak için **JSON yedek** alın.
+
 ## Kullanım
 
-1. Proje/firma bilgisi ve desen kodunu belirleyin.
-2. Motif renklerini seçin; kendi renk kodlarınızı yazabilirsiniz.
-3. Hazır motiflerden seçin veya PNG/JPEG yükleyin.
-4. Yerleşim, yön, yoğunluk ve ölçeği ayarlayın; **Karıştır** ile alternatif üretin.
-5. Zemin ve biye renklerini ayarlayın.
-6. Atlet, külot, boxer, takım veya üçlü/beşli paket varyantları hazırlayın.
-7. Sunum önizlemesinde A5/A6 seçip **Yazdır / PDF** işlemini kullanın.
+Dört adım vardır; soldaki menüden ya da alttaki ileri/geri düğmeleriyle geçilir.
 
-Varyantlar ortak bir kompozisyonu kullanır. Deseni karıştırmak bütün ürünlerdeki
-ortak yerleşimi günceller; yalnız zemin rengini değiştirmek yerleşimi değiştirmez.
+1. **Desen:** hazır motiflere dokunun, kendi deseninizi yükleyin (PNG/JPEG) ya da
+   çizim atölyesinde çizin. "Motifleri yeniden diz" ile yerleşimi, kaydırıcılarla
+   büyüklüğü ve motif sayısını ayarlayın. Dönüş ve tekrar ölçüsü "İnce ayar"dadır.
+2. **Renkler:** zemini hazır renklerden (şeker pembesi, mint, ekru…) ya da renk
+   kutusundan seçin; biye ve motif renklerini ayarlayın.
+3. **Ürünler:** grubu (Kadın / Erkek / Çocuk), ürünü ve paketi seçin, istediğiniz zemin renklerini işaretleyin,
+   "İşaretli renklerle ürünleri oluştur"a basın. Listeden bir ürüne dokunarak
+   düzenleyebilir, × ile silebilirsiniz.
+4. **Föy & yazdır:** firma, beden, kumaş ve kâğıdı (A5/A6) girip "Yazdır / PDF
+   kaydet"e basın.
+
+Grup seçimi ürün listesini süzer (Kadın: atlet, askılı atlet, külot; Erkek:
+atlet, boxer; Çocuk: hepsi) ve föye yazılır. Kalıp çizimleri üç grupta aynıdır.
+
+Deseni değiştirmek bütün ürünleri birlikte günceller; zemin ve biye her üründe
+ayrıdır. Çalışma kendiliğinden bu tarayıcıya kaydedilir.
 
 ## Desen kaynakları
 
@@ -50,7 +80,14 @@ zeminini (ör. şeker pembesi, mint, ekru) kullanabilirsiniz. Sonuç ayrı bir P
 olarak eklenir (en uzun kenar 1600 px), özgün dosya durur. Düz renkli baskılarda
 iyi çalışır; fotoğraf ve yumuşak geçişli görsellerde sonuç kabadır.
 
-**Çizim atölyesi** (Desen & motif adımı): motif, fırça, silgi ve simetriyle
+**Figür seç** (her görselin altında): görselde bir figürün etrafına kutu çizin;
+kutunun kenarındaki zemin rengi silinir ve figür şeffaf motif olarak eklenir.
+Düz zeminli, büyük ve net desen görsellerinde iyi çalışır; giysi fotoğrafından
+(kırışık, gölge, düşük çözünürlük) kesilen figür baskıya uygun olmaz. Yalnız
+kullanım hakkı sizde olan görsellerde kullanın; lisanslı karakterler izinsiz
+basılamaz.
+
+**Çizim atölyesi** (Desen adımı): motif, fırça, silgi ve simetriyle
 kesintisiz tekrar eden raport çizersiniz; düz, yarım kaydırma, tuğla ve ayna
 dizilimi, raport/kumaş PNG indirme vardır. "Desene uygula" çizimi şeffaf PNG
 olarak projeye bütün desen diye yazar. Çizim taslağı projeden ayrı olarak bu
@@ -75,7 +112,9 @@ dosya içeri alınabilir. Bozuk veya desteklenmeyen proje mevcut çalışmanın
 
 - A5: bir sayfada en fazla altı varyant.
 - A6: bir sayfada en fazla üç varyant.
-- Başlık, kaynak desen, renkler ve ürünler sunum föyüne yerleştirilir.
+- Föy düzeni: üstte koyu şeritte "DESEN kod" ve firma adı; solda ölçü
+  çizgileriyle desen kutusu, altında R1… desen renkleri ve F1… zemin renkleri;
+  sağda "VARYANT n" başlıklı ürünler (takımlar üst üste çizilir).
 - Sunum föyü adımındaki **Beden** ve **Kumaş** alanları doluysa föye yazılır.
 - PDF, tarayıcının yazdır diyalogundaki **PDF olarak kaydet** seçeneğidir.
 - Baskı diyalogunda seçili kağıt boyutunu kontrol edin; üstbilgi/altbilgiyi
@@ -108,6 +147,13 @@ Tarayıcı testi, Python Playwright ve Chromium test ortamını kullanır:
 
 ```bash
 python3 tests/e2e.py
+```
+
+Sunucu sınırları (Linux ve Windows kod yolu) ve tek dosyalık sürüm:
+
+```bash
+python3 tests/server_test.py
+python3 tests/tek_dosya_test.py
 ```
 
 Görsel/PDF test çıktıları `test-results/` altına yazılır ve Git'e eklenmez.

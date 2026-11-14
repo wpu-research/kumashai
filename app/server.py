@@ -4,6 +4,7 @@
 import argparse
 import json
 import os
+import re
 from pathlib import Path
 import stat
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -11,6 +12,12 @@ from urllib.parse import unquote, urlsplit
 
 
 WEB_ROOT = Path(__file__).resolve().parent.parent / "web"
+# POSIX: descriptor-relative opens. Windows: portable checks (see _open_portable).
+DIR_FD_OPEN = (os.open in os.supports_dir_fd and hasattr(os, "O_NOFOLLOW")
+               and hasattr(os, "O_DIRECTORY") and hasattr(os, "O_NONBLOCK"))
+PORTABLE_PART = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_.-]*\Z")
+WINDOWS_DEVICES = {"con", "prn", "aux", "nul",
+                   *(f"com{i}" for i in range(1, 10)), *(f"lpt{i}" for i in range(1, 10))}
 ALLOWED_TYPES = {
     ".html": "text/html; charset=utf-8",
     ".css": "text/css; charset=utf-8",
@@ -84,38 +91,74 @@ class StudioHandler(BaseHTTPRequestHandler):
             self.error(404, "Dosya bulunamadı.")
             return
 
-        # Open each component relative to an open directory descriptor.
-        # O_NOFOLLOW protects against symlinks, including a concurrent swap.
-        descriptors = []
         try:
-            root_fd = os.open(WEB_ROOT, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
-            descriptors.append(root_fd)
-            current_fd = root_fd
-            for part in parts[:-1]:
-                current_fd = os.open(
-                    part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
-                    dir_fd=current_fd,
-                )
-                descriptors.append(current_fd)
-            fd = os.open(parts[-1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=current_fd)
-            descriptors.append(fd)
-            info = os.fstat(fd)
-            if not stat.S_ISREG(info.st_mode):
-                raise OSError("not a regular file")
-            self.send_response(200)
-            self.send_header("Content-Type", ALLOWED_TYPES[Path(parts[-1]).suffix.lower()])
-            self.send_header("Content-Length", str(info.st_size))
-            self.end_headers()
-            if self.command != "HEAD":
-                with os.fdopen(os.dup(fd), "rb") as source:
-                    while chunk := source.read(65536):
-                        self.wfile.write(chunk)
+            source, size = open_web_file(parts)
         except (OSError, ValueError):
             # No filesystem path or source information is exposed in errors.
             self.error(404, "Dosya bulunamadı.")
-        finally:
-            for fd in reversed(descriptors):
-                os.close(fd)
+            return
+        with source:
+            self.send_response(200)
+            self.send_header("Content-Type", ALLOWED_TYPES[Path(parts[-1]).suffix.lower()])
+            self.send_header("Content-Length", str(size))
+            self.end_headers()
+            if self.command != "HEAD":
+                try:
+                    while chunk := source.read(65536):
+                        self.wfile.write(chunk)
+                except OSError:
+                    pass  # client went away mid-response
+
+
+def open_web_file(parts):
+    """Return (binary file, size) for a regular file strictly inside WEB_ROOT."""
+    if DIR_FD_OPEN:
+        return _open_with_dir_fd(parts)
+    return _open_portable(parts)
+
+
+def _open_with_dir_fd(parts):
+    # Open each component relative to an open directory descriptor.
+    # O_NOFOLLOW protects against symlinks, including a concurrent swap.
+    descriptors = []
+    try:
+        current_fd = os.open(WEB_ROOT, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        descriptors.append(current_fd)
+        for part in parts[:-1]:
+            current_fd = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=current_fd)
+            descriptors.append(current_fd)
+        fd = os.open(parts[-1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=current_fd)
+        try:
+            info = os.fstat(fd)
+            if not stat.S_ISREG(info.st_mode):
+                raise OSError("not a regular file")
+            return os.fdopen(fd, "rb"), info.st_size
+        except BaseException:
+            os.close(fd)
+            raise
+    finally:
+        for descriptor in reversed(descriptors):
+            os.close(descriptor)
+
+
+def _open_portable(parts):
+    # Windows has no dir_fd / O_NOFOLLOW. Accept only plain names, refuse links
+    # on the way, then require the fully resolved file to stay inside WEB_ROOT.
+    for part in parts:
+        if (not PORTABLE_PART.match(part) or part.endswith(".")
+                or part.split(".")[0].lower() in WINDOWS_DEVICES):
+            raise ValueError("unsupported name")
+    current = WEB_ROOT
+    for part in parts:
+        current = current / part
+        if current.is_symlink():
+            raise ValueError("link refused")
+    root = WEB_ROOT.resolve(strict=True)
+    resolved = current.resolve(strict=True)
+    if root not in resolved.parents or not resolved.is_file():
+        raise ValueError("outside web root")
+    source = open(resolved, "rb")
+    return source, os.fstat(source.fileno()).st_size
 
 
 def main():
@@ -124,7 +167,12 @@ def main():
     args = parser.parse_args()
     if not 1 <= args.port <= 65535:
         parser.error("--port 1–65535 arasında olmalı")
-    server = ThreadingHTTPServer(("127.0.0.1", args.port), StudioHandler)
+    try:
+        server = ThreadingHTTPServer(("127.0.0.1", args.port), StudioHandler)
+    except OSError:
+        # Most likely already running (second double-click). ASCII only: Windows consoles.
+        print(f"Port {args.port} kullanimda; KumashAi zaten calisiyor olabilir: http://127.0.0.1:{args.port}", flush=True)
+        return
     print(f"KumashAi: http://127.0.0.1:{args.port}", flush=True)
     try:
         server.serve_forever()

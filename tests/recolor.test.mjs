@@ -46,3 +46,41 @@ test('beden/kumaş: eski kayıt boş değerle açılır, yeni değer korunur, s�
   assert.equal(parseProject(serializeProject(next)).fabric, 'Full likralı süprem');
   assert.throws(() => validateProject({ ...defaultProject(), size: 'x'.repeat(41) }));
 });
+
+test('figür: kenara bağlı zemin silinir, iç delik ve figür kalır, sınır kutusu döner', async () => {
+  const { cutFigure } = await import('../web/figur.js');
+  // 7×7 turkuaz zemin; ortada 3×3 sarı figür, figürün tam ortası zemin renginde (delik).
+  const w = 7, data = new Uint8ClampedArray(w * w * 4);
+  for (let p = 0; p < w * w; p++) {
+    const x = p % w, y = Math.floor(p / w);
+    const inside = x >= 2 && x <= 4 && y >= 2 && y <= 4;
+    data.set(inside && !(x === 3 && y === 3) ? [240, 200, 40, 255] : [60, 210, 220, 255], p * 4);
+  }
+  const cut = cutFigure(data, w, w, 40);
+  assert.deepEqual(cut.bounds, { x: 2, y: 2, width: 3, height: 3 });
+  assert.equal(cut.data[3], 0);                       // köşe: silindi
+  assert.equal(cut.data[(2 * w + 2) * 4 + 3], 255);   // figür: duruyor
+  assert.equal(cut.data[(3 * w + 3) * 4 + 3], 255);   // kenara bağlı olmayan delik: duruyor
+  assert.equal(cutFigure(new Uint8ClampedArray(w * w * 4).fill(255), w, w, 40), null);
+});
+
+test('föy renk kareleri: desen R1…, sayfadaki zeminler F1… (tekrarsız, adlı)', async () => {
+  const { defaultProject, sheetColors, readableInk } = await import('../web/design.js');
+  const project = defaultProject();
+  project.variants.push({ ...project.variants[0], id: 'again' }, { ...project.variants[0], id: 'pink', background: '#f9c9d4' });
+  const { design, grounds } = sheetColors(project);
+  assert.deepEqual(design.map(c => c.label), ['R1', 'R2', 'R3', 'R4']);
+  assert.deepEqual(grounds.map(g => `${g.label} ${g.name}`), ['F1 Vanilya', 'F2 Adaçayı', 'F3 Pudra', 'F4 Şeker pembesi']);
+  assert.equal(readableInk('#17191C'), '#FFFFFF');
+  assert.equal(readableInk('#F4EEE2'), '#22262A');
+});
+
+test('grup: eski kayıt çocuk olarak açılır; geçersiz grup reddedilir; föyde yazılır', async () => {
+  const { defaultProject, validateProject, AUDIENCES, PRODUCTS } = await import('../web/design.js');
+  const { printSheetsHTML } = await import('../web/render.js');
+  const old = defaultProject(); delete old.audience;
+  assert.equal(validateProject(old).audience, 'cocuk');
+  assert.throws(() => validateProject({ ...defaultProject(), audience: 'bebek' }));
+  for (const group of Object.values(AUDIENCES)) for (const product of group.products) assert.ok(PRODUCTS[product]);
+  assert.ok(printSheetsHTML({ ...defaultProject(), audience: 'kadin' }).includes('<strong>Grup:</strong> Kadın'));
+});

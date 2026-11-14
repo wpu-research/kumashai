@@ -116,8 +116,11 @@ class StudioBrowserTests(unittest.TestCase):
         finally:
             self.context.close()
 
+    # Testler eski yedi adımlı numaralarla yazıldı; arayüz dört adıma indirildi.
+    STEP_MAP = {1: 2, 2: 1, 3: 1, 4: 2, 5: 3, 6: 4, 7: 4}
+
     def step(self, number):
-        self.page.get_by_test_id(f"step-{number}").click()
+        self.page.get_by_test_id(f"step-{self.STEP_MAP[number]}").click()
 
     def exported(self, filename="project.json"):
         with self.page.expect_download() as event:
@@ -168,7 +171,7 @@ class StudioBrowserTests(unittest.TestCase):
         return path
 
     def test_01_desktop_workbench(self):
-        expect(self.page.locator("[data-step]")).to_have_count(7)
+        expect(self.page.locator("[data-step]")).to_have_count(4)
         expect(self.page.get_by_test_id("variant-card")).to_have_count(3)
         self.assertLessEqual(
             self.page.evaluate("document.documentElement.scrollWidth"),
